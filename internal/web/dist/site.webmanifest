@@ -1,0 +1,24 @@
+{
+  "name": "LAN Sheriff",
+  "short_name": "LAN Sheriff",
+  "description": "Watch what leaves your network, map where it goes, and flag what does not belong.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f6fb",
+  "theme_color": "#f4f6fb",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ]
+}

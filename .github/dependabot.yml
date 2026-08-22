@@ -1,0 +1,50 @@
+# Dependency updates, batched rather than one pull request per bump.
+#
+# The reason for grouping is the same reason the CI workflow cancels superseded
+# runs: every pull request here starts a thirteen-job matrix, and macOS runners
+# bill at ten times the ubuntu rate. Ungrouped, a quiet week of patch releases
+# across Go, npm and the actions is a dozen pull requests and a dozen full
+# matrices to approve one line each.
+#
+# Weekly rather than daily. A security fix does not wait for this: GitHub raises
+# those the moment the advisory lands, whatever the schedule says.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      # Patch and minor bumps together. A major is left on its own, because a
+      # major is a decision rather than an update.
+      go-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "deps"
+
+  - package-ecosystem: npm
+    directory: /web
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+    commit-message:
+      prefix: "deps"
+
+  # The actions themselves. Left out of the first draft, which is how a workflow
+  # ends up pinned to a version whose runner image no longer exists.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      actions:
+        patterns: ["*"]
+    commit-message:
+      prefix: "ci"

@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<!-- Unraid Community Applications template. -->
+<Container version="2">
+  <Name>lan-sheriff</Name>
+  <Repository>ghcr.io/291-group/lan-sheriff:latest</Repository>
+  <Registry>https://ghcr.io/291-group/lan-sheriff</Registry>
+  <Project>https://lansheriff.com</Project>
+  <Support>https://github.com/291-Group/LAN-Sheriff/issues</Support>
+  <ReadMe>https://github.com/291-Group/LAN-Sheriff</ReadMe>
+  <Icon>https://raw.githubusercontent.com/291-Group/LAN-Sheriff/main/web/public/icon-512.png</Icon>
+  <Category>Network:Other Tools:Utilities Security:</Category>
+  <Overview>
+    Watches every connection leaving this machine, maps where it is headed on a
+    world map, names the application responsible, and flags behaviour worth a
+    second look. It observes only: nothing is ever blocked, dropped or modified.
+
+    Network type must stay on Host. On a bridge the container watches Docker's
+    own network and the dashboard comes up empty.
+
+    Unraid sits on the LAN rather than between the LAN and the internet, so
+    Patrol Mode will see this server's traffic and broadcast, and not the rest.
+    Seeing other devices needs a mirror or SPAN port. The dashboard says so
+    rather than looking broken.
+  </Overview>
+  <Network>host</Network>
+  <Privileged>false</Privileged>
+  <ExtraParams>--cap-drop=ALL --cap-add=NET_RAW --cap-add=NET_ADMIN</ExtraParams>
+  <PostArgs>serve --listen 0.0.0.0:2911 --open=false</PostArgs>
+  <WebUI>http://[IP]:2911</WebUI>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/lan-sheriff"
+          Mode="rw" Description="Database and downloaded datasets"
+          Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/lan-sheriff</Config>
+</Container>

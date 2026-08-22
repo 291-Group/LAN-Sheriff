@@ -1,0 +1,40 @@
+# Build output
+/lan-sheriff
+/demoseed
+/lan-sheriff.exe
+/dist/
+/build/
+
+# The built dashboard under internal/web/dist/ is intentionally COMMITTED so
+# that `go install` works without Node. Rebuild it with `make web`.
+
+# Frontend
+/web/node_modules/
+/web/dist/
+/web/.vite/
+*.tsbuildinfo
+
+# Runtime data dir and anything fetched at runtime (GeoIP/ASN/blocklists)
+/data/
+*.db
+*.db-wal
+*.db-shm
+*.mmdb
+
+# Go
+*.test
+*.out
+coverage.*
+vendor/
+
+# Local config and secrets
+config.ini
+.env
+*.token
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
+bin/

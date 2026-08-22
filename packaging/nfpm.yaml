@@ -1,0 +1,79 @@
+# The .deb, .rpm and .apk, built by the nfpm CLI rather than by goreleaser.
+#
+# goreleaser used to produce these as part of `goreleaser release`, and that
+# command is no longer used: the capture builds are produced one operating
+# system per runner, and the open-source edition cannot package binaries it did
+# not itself build. So the packages are built here, from the same binaries the
+# archives are made from, by the same tool goreleaser would have called anyway.
+#
+# Kept faithful to the block it replaces. The one deliberate difference is that
+# the binary path is templated, because nfpm is invoked once per architecture
+# with the binary that architecture actually produced.
+
+name: lan-sheriff
+arch: ${PKG_ARCH}
+platform: linux
+version: ${PKG_VERSION}
+section: net
+priority: optional
+maintainer: 291 Group <info@291group.com>
+vendor: 291 Group
+homepage: https://lansheriff.com
+license: AGPL-3.0-or-later
+description: |
+  Self-hosted network monitor.
+  Watches every connection leaving this machine, maps where it is headed,
+  names the application responsible, and flags behaviour worth a second
+  look. Observes only; it never blocks or modifies traffic.
+
+contents:
+  - src: ${PKG_BINARY}
+    dst: /usr/bin/lan-sheriff
+    file_info:
+      mode: 0755
+
+  # The unit grants the two capabilities Patrol Mode needs, so capture works
+  # without running the whole thing as root.
+  - src: packaging/systemd/lan-sheriff.service
+    dst: /usr/lib/systemd/system/lan-sheriff.service
+    file_info:
+      mode: 0644
+
+  # Alpine has no systemd, so it gets the OpenRC script instead and nothing
+  # else changes.
+  - src: packaging/openrc/lan-sheriff
+    dst: /etc/init.d/lan-sheriff
+    packager: apk
+    file_info:
+      mode: 0755
+
+  - src: README.md
+    dst: /usr/share/doc/lan-sheriff/README.md
+    file_info:
+      mode: 0644
+
+  # Shipped with the package because it is the document that explains why a
+  # correctly installed monitor can still show only one machine.
+  - src: docs/VANTAGE-POINTS.md
+    dst: /usr/share/doc/lan-sheriff/VANTAGE-POINTS.md
+    file_info:
+      mode: 0644
+
+  - dst: /var/lib/lan-sheriff
+    type: dir
+    file_info:
+      mode: 0700
+      owner: lan-sheriff
+      group: lan-sheriff
+
+scripts:
+  postinstall: packaging/scripts/postinstall.sh
+  preremove: packaging/scripts/preremove.sh
+  postremove: packaging/scripts/postremove.sh
+
+rpm:
+  group: Applications/Internet
+
+deb:
+  predepends:
+    - adduser

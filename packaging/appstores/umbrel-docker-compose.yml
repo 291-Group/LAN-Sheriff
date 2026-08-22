@@ -1,0 +1,32 @@
+# The compose file Umbrel runs. Kept beside the manifest because the two are
+# reviewed together.
+version: "3.7"
+
+services:
+  app_proxy:
+    environment:
+      APP_HOST: lan-sheriff_web_1
+      APP_PORT: 2911
+
+  web:
+    image: ghcr.io/291-group/lan-sheriff:1.0.0
+    restart: on-failure
+    stop_grace_period: 1m
+
+    # Host networking, for the same reason it is required everywhere else: a
+    # container on a bridge watches Docker's own network and reports nothing
+    # useful about the one the user cares about.
+    network_mode: host
+
+    cap_drop: [ALL]
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+    volumes:
+      - ${APP_DATA_DIR}/data:/data
+
+    environment:
+      - LAN_SHERIFF_DATA_DIR=/data
+
+    command: ["serve", "--listen", "0.0.0.0:2911", "--open=false"]

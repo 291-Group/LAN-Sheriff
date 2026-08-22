@@ -1,0 +1,719 @@
+import type { Catalog } from './en'
+
+// Brazilian Portuguese.
+export const pt: Catalog = {
+  meta: { name: 'Português', dir: 'ltr' },
+
+  app: {
+    name: 'LAN Sheriff',
+    org: '291 Group',
+    byOrg: 'por 291 Group',
+    motto: 'Nada sai da cidade sem ser notado.',
+    privacy: 'O LAN Sheriff fica nesta máquina.',
+    noTelemetry: 'Sem conta, sem nuvem, sem telemetria.',
+    build: 'compilação {n}',
+    privacyPeeringNone: 'A partilha entre pares está ligada, mas ainda não há nada emparelhado.',
+    privacyPeering: 'Partilhado com {count} máquina emparelhada.',
+    privacyPeeringPlural: 'Partilhado com {count} máquinas emparelhadas.',
+  },
+
+  nav: {
+    watchtower: 'A Torre de Vigia',
+    watchtowerSub: 'Mapa de saída',
+    chatter: 'O Rádio',
+    chatterSub: 'Atividade de DNS',
+    precinct: 'O Mapa do Distrito',
+    precinctSub: 'Topologia da rede',
+    roster: 'O Registro',
+    rosterSub: 'Inventário de dispositivos',
+    wanted: 'A Lista de Procurados',
+    wantedSub: 'Motor de suspeita',
+    help: 'Ajuda',
+    helpSub: 'Como funciona',
+    comingIn: 'Chega na etapa {milestone}',
+    notInBuild: '{name} ainda não está nesta versão.',
+    milestone: 'etapa {milestone}',
+  },
+
+  status: {
+    deputyMode: 'Modo delegado',
+    patrolMode: 'Modo patrulha',
+    offlineMode: 'A ler um registo',
+    starting: 'A iniciar',
+    reconnecting: 'Reconectando',
+    destinations: 'destinos',
+    countries: 'países',
+    connections: 'conexões',
+    live: 'ao vivo',
+    latestOut: 'Última saída',
+    nothingYet: 'Nada ainda',
+    latestTooltip: 'A conexão de saída mais recente observada',
+  },
+
+  actions: {
+    switchToDark: 'Mudar para o tema escuro',
+    switchToLight: 'Mudar para o tema claro',
+    settings: 'Configurações',
+    signOut: 'Sair',
+    dismiss: 'Dispensar',
+    close: 'Fechar',
+    loading: 'A carregar',
+    cancel: 'Cancelar',
+    save: 'Salvar configurações',
+    saved: 'Salvo',
+    language: 'Idioma',
+    whatModeSees: 'O que este modo consegue ver',
+    runThis: 'Execute isto',
+    copy: 'Copiar',
+    copied: 'Copiado',
+    paste: 'Colar',
+    pasteBlocked: 'Use Ctrl+V',
+  },
+
+  toolbar: {
+    searchPlaceholder: 'Buscar destinos, aplicativos, organizações',
+    exportCsv: 'Baixar esta visão em CSV',
+    exportJson: 'Baixar esta visão em JSON',
+    clearAll: 'Limpar tudo',
+    removeFilter: 'Remover este filtro',
+    scrubbed: 'Histórico',
+    backToLive: 'Voltar ao ao vivo',
+    timeRange: 'Período',
+    filterApp: 'aplicativo: {value}',
+    filterCountry: 'país: {value}',
+    filterOrg: 'organização: {value}',
+    filterProto: 'protocolo: {value}',
+    filterPort: 'porta: {value}',
+    showOnly: 'Mostrar apenas {value}',
+  },
+
+  watchtower: {
+    destinations: 'Destinos',
+    seenIn: '{count} vistos neste período',
+    volumesNeedPatrol: 'Medir o volume de tráfego exige o modo patrulha',
+    watchingTitle: 'De olho na estrada',
+    watchingNoTraffic:
+      'Nenhum tráfego de saída observado ainda. Abra uma aba do navegador, ou deixe o LAN Sheriff rodando por um momento, e os destinos começarão a aparecer.',
+    watchingNotLocated:
+      'Conexões foram observadas, mas nenhuma foi localizada ainda. O banco de dados de localização está sendo baixado; os destinos aparecerão no mapa assim que ele estiver pronto.',
+    noMatch: 'Nenhuma conexão corresponde ao filtro atual.',
+    noMatchTitle: 'Nenhuma correspondência',
+    layersLabel: 'Máquinas mostradas',
+    layerMine: 'Esta máquina',
+    layerAll: 'Tudo',
+    layerCountryOnly: 'Um par comunica um país, não um endereço, pelo que ficam no centro do país.',
+    layerNoDomains:
+      'As instâncias pares nunca enviam os domínios que consultaram, por isso a Conversa de Rádio mostra sempre apenas esta máquina. O resto desta camada está nas outras vistas.',
+    originUnknown: 'A localização desta rede ainda não é conhecida, por isso as linhas partem de um ponto neutro e não de si. Resolve-se assim que os dados de localização forem descarregados.',
+    recordEmpty:
+      'Este registo não contém tráfego de saída no período selecionado. Experimente um intervalo de tempo mais amplo.',
+    recordNotLocated:
+      'Estes destinos não foram localizados quando este registo foi criado, pelo que nenhum aparece no mapa.',
+    originUnknownRecord:
+      'A localização desta rede não foi guardada neste registo, pelo que as linhas partem de um ponto neutro em vez de si.',
+    legendYou: 'Você',
+    zoomIn: 'Aproximar',
+    countries: 'Nomes de países e fronteiras',
+    zoomOut: 'Afastar',
+    legendJustNow: 'Agora mesmo',
+    legendActive: 'Ativa',
+    legendClosed: 'Encerrada',
+    legendReported: 'Comunicado por um par',
+    peerMore: 'Mostrar mais {n}',
+    attribution: 'Dados de localização',
+    connections: '{count} conexão',
+    connectionsPlural: '{count} conexões',
+  },
+
+  rapsheet: {
+    address: 'Endereço',
+    reverseDns: 'DNS reverso',
+    organization: 'Organização',
+    location: 'Localização',
+    ports: 'Portas',
+    connections: 'Conexões',
+    devices: 'Dispositivos',
+    traffic: 'Tráfego',
+    apps: 'Aplicativos',
+    firstSeen: 'Primeira vez',
+    lastSeen: 'Última vez',
+    unknown: 'Desconhecida',
+    notMeasured: 'Não medido',
+    outIn: '{out} saída / {in} entrada',
+    reportedBy:
+      'Comunicado por',
+    peerNote:
+      'Uma instância par comunica organizações e países, nunca endereços, por isso não há aqui nada para consultar: nem endereço, nem DNS inverso, nem portas. São resumos horários e não ligações individuais.',
+  },
+
+  gate: {
+    setupTitle: 'Crie uma senha',
+    loginTitle: 'Entrar',
+    setupExposed:
+      'Este painel pode ser acessado a partir da sua rede, por isso exige uma senha antes de exibir qualquer coisa. O LAN Sheriff registra a quais servidores cada dispositivo daqui se conecta, e esse registro não deveria poder ser lido por qualquer um que descubra o endereço.',
+    setupLocal:
+      'Escolha uma senha antes de abrir o painel. O LAN Sheriff registra a quais servidores cada dispositivo daqui se conecta, e esse registro não deveria poder ser lido por outras pessoas que usam esta máquina.',
+    loginPrompt: 'Digite a senha deste painel.',
+    password: 'Senha',
+    confirmPassword: 'Confirmar senha',
+    submitSetup: 'Criar senha e continuar',
+    submitLogin: 'Entrar',
+    working: 'Processando…',
+    storedAs:
+      'Armazenada como hash bcrypt no diretório de dados, legível apenas pela sua conta de usuário. A senha nunca é enviada a lugar nenhum.',
+    tooShort: 'A senha precisa ter pelo menos {min} caracteres.',
+    mismatch: 'As duas senhas não coincidem.',
+    lockedOut:
+      'Tentativas malsucedidas demais deste endereço. Aguarde alguns minutos antes de tentar de novo.',
+    offlineTitle: 'Não é possível contactar o LAN Sheriff',
+    offlineWhy:
+      'O painel está aberto, mas o serviço por trás não responde. Pode ainda estar a arrancar. As tentativas continuam automaticamente.',
+    offlineRetry: 'Tentar agora',
+    unreachable: 'Não foi possível alcançar o LAN Sheriff. Ele ainda está rodando?',
+    generic: 'Algo deu errado.',
+  },
+
+  settings: {
+    title: 'Configurações',
+    intro:
+      'O LAN Sheriff guarda o detalhe completo por um período curto e resumos por hora por muito mais tempo, de modo que o histórico continue útil sem o banco de dados crescer sem limite.',
+    rawHours: 'Guardar o detalhe completo por (horas)',
+    rollupDays: 'Guardar resumos por hora por (dias)',
+    maxSize: 'Tamanho máximo do banco de dados (MB)',
+    currentlyUsing: 'Em uso atualmente',
+    storedIn: 'Armazenado em',
+    loadFailed: 'Não foi possível carregar as configurações.',
+    saveFailed: 'Não foi possível salvar as configurações.',
+    captureTitle: 'Interface de captura',
+    captureBody:
+      'O Modo patrulha observa uma interface de rede de cada vez. Esta instalação usa a assinalada abaixo.',
+    captureActive: 'Em uso',
+    captureRecommended: 'Seria escolhida automaticamente',
+    captureOverridden:
+      'A esta instalação foi indicada a interface a usar, pelo que a escolha automática não foi seguida.',
+    captureChange: 'Para observar outro, reinicie com --interface e o nome mostrado aqui.',
+    dangerTitle: 'Apagar tudo',
+    dangerBody:
+      'Remove todas as conexões, destinos e resumos registrados até agora. Sua senha e o registro desta máquina são mantidos. Isso não pode ser desfeito.',
+    dangerConfirm: 'Sim, apagar tudo',
+    dangerButton: 'Apagar todos os dados',
+    wipeFailed: 'Não foi possível apagar os dados.',
+  },
+
+  dispatch: {
+    title: 'A Central',
+    offTitle: 'A partilha entre pares está desligada',
+    offBody: 'Nada do que esta máquina observa saiu dela. Ative a partilha para trocar resumos horários com as instâncias que emparelhar, nada é partilhado até emparelhar uma.',
+    turnOn: 'Ativar a partilha entre instâncias',
+    turnOff: 'Desativar a partilha',
+    thisMachine: 'Esta máquina',
+    reachableAt: 'Os pares alcançam-na em',
+    noPeers: 'Ainda não há máquinas emparelhadas.',
+    noPeersHint: 'Emparelhe outro LAN Sheriff e cada um mostrará o que o outro vê.',
+    connected: 'Ligado',
+    unreachable: 'Inalcançável',
+    suspended: 'Suspenso',
+    stale: 'Dados desactualizados',
+    lastSeen: 'Última notícia {when}',
+    neverSeen: 'Nunca ligou',
+    pairButton: 'Mostrar um código',
+    pairRoles:
+      'O emparelhamento exige duas máquinas a fazer coisas diferentes: uma mostra um código e a outra introduz.',
+    pairTitle: 'Escreva este código na outra máquina',
+    pairAddress: 'Também precisa deste endereço',
+    pairExpires: 'Expira em {time}',
+    pairExpired: 'Este código expirou.',
+    pairNewCode: 'Mostrar um código novo',
+    pairDiscardAsk:
+      'Fechar e descartar este código? A outra máquina precisará de um novo.',
+    pairDiscardYes: 'Descartar o código',
+    pairDiscardNo: 'Manter aberto',
+    pairWaiting: 'À espera da outra máquina…',
+    pairDone: 'Emparelhado com {name}.',
+    joinButton: 'Introduzir um código',
+    joinTitle: 'Emparelhar com uma máquina que mostra um código',
+    joinAddress: 'Endereço da outra máquina',
+    joinCode: 'Código de emparelhamento',
+    joinCodeHint: 'Escreva em qualquer caso; os hífens são adicionados por si.',
+    codeRemaining: 'faltam {n} caracteres',
+    joinLabel: 'Nome para esta máquina (opcional)',
+    joinSubmit: 'Emparelhar',
+    joinWorking: 'A emparelhar…',
+    errBadCode: 'Esse código não está certo. Os códigos servem uma só vez: peça um novo.',
+    errWrongMachine: 'Esse código pertence a uma máquina diferente do endereço indicado.',
+    errMalformed:
+      'Isso não parece um código de emparelhamento. Um código tem oito grupos de cinco caracteres, mostrados na outra máquina em «Mostrar um código». Copie-o por inteiro.',
+    errVersion: 'Essa máquina executa outra versão do LAN Sheriff.',
+    errUnreachable: 'Não foi possível alcançar esse endereço.',
+    errRefused:
+      'Essa máquina respondeu e recusou a ligação, portanto o endereço está certo e nada está à escuta na porta 2912. Verifique se o LAN Sheriff está a correr lá com a partilha entre instâncias ligada.',
+    errRefusedVPN:
+      'Essa máquina recusou a ligação, e há uma VPN a funcionar nesta. É a causa mais provável: uma VPN com kill switch, ou sem acesso à rede local, bloqueia o tráfego para máquinas da sua própria rede mesmo que tudo o resto continue a funcionar. Permita o tráfego de rede local nas definições, ou desligue-a por um momento.',
+    errRefusedTailscale:
+      "Essa máquina recusou a ligação, e o Tailscale está a correr aqui. A definição 'Block incoming connections' impede o tráfego em todas as redes, não apenas na tailnet. Desligue-a, ou verifique se o LAN Sheriff está a correr na outra máquina com a partilha ligada.",
+    errOffSubnet:
+      'Esse endereço não pertence a nenhuma rede a que esta máquina esteja ligada, por isso não é alcançável daqui. Ambas as máquinas têm de estar na mesma rede. Verifique o endereço no ecrã de emparelhamento da outra máquina, e que ambas estão no mesmo Wi-Fi ou no mesmo router.',
+    errDropped:
+      'Nada respondeu. Os pacotes são descartados em silêncio, que é o que uma firewall faz em vez de responder. Verifique a firewall dessa máquina e qualquer VPN ou software de segurança que tenha.',
+    errDroppedTailscale:
+      'Nada respondeu, e o Tailscale está a correr aqui. A definição «Bloquear ligações de entrada» descarta o tráfego de entrada em todas as redes, não apenas na tailnet, enquanto o de saída continua a funcionar. Desligue essa definição, ou verifique a firewall da outra máquina.',
+    errDroppedVPN:
+      'Nada respondeu, e há uma VPN a correr aqui. Um kill switch descarta o tráfego que não passa pelo túnel, e outra máquina na sua própria rede é exatamente isso. Desligue-a por um momento, ou permita tráfego de rede local nas definições.',
+    errNotShowing:
+      'Essa máquina está acessível, mas não está a mostrar um código neste momento. Os códigos duram quinze minutos e terminam assim que a janela fecha, por isso abra Mostrar um código nela e escreva aqui enquanto o código estiver no ecrã.',
+    errOff: 'A partilha entre pares não está a correr nesta máquina.',
+    suspend: 'Deixar de acreditar neste par',
+    suspendHint: 'Mantém o emparelhamento e deixa de juntar os seus dados. Use isto se um par começar a comportar-se de forma estranha, desemparelhar também o impediria de o vigiar.',
+    resume: 'Voltar a confiar neste par',
+    unpair: 'Desemparelhar',
+    unpairConfirm: 'Desemparelhar e apagar tudo o que enviou?',
+    nameThis: 'Dar um nome a esta máquina',
+    namePlaceholder: 'Um nome que reconheça',
+    unpairHint: 'Isto não pode ser anulado. A outra máquina mantém o seu próprio registo.',
+    confirm: 'Sim, desemparelhar',
+  },
+
+  timeline: {
+    hint: 'Atividade por hora. Clique em uma hora para vê-la.',
+    inRange: 'no período',
+    now: 'agora',
+  },
+
+  chatter: {
+    feed: 'Fluxo ao vivo',
+    top: 'Domínios frequentes',
+    new: 'Vistos agora',
+    lookups: 'consultas',
+    domains: 'domínios',
+    newDomains: 'novos',
+    flagged: 'marcados',
+    flaggedOnly: 'Somente marcados',
+    noLookups: 'Nenhuma consulta DNS registrada neste período.',
+    noLookupsHint:
+      'O DNS cifrado é a razão habitual. Os navegadores e o Windows enviam cada vez mais consultas por HTTPS, que não podem ser lidas sem intercetar TLS, e o LAN Sheriff nunca o faz. Uma VPN ou um resolvedor separado também retira as consultas do campo de visão.',
+    noNew: 'Nenhum domínio foi visto pela primeira vez neste período.',
+    searchThis: 'Filtrar por este domínio',
+    newTag: 'novo',
+    needsPatrol: 'Consultas DNS só são visíveis no modo patrulha, ou quando esta máquina é o resolvedor.',
+    listsLoaded: '{count} domínios rotulados e prontos',
+  },
+
+  roster: {
+    title: 'O Registo',
+    subtitle: 'Todos os dispositivos vistos nesta rede',
+    empty: 'Ainda não foi encontrado nenhum dispositivo.',
+    emptyHint: 'Os dispositivos são detetados quando comunicam na rede. Normalmente demora um ou dois minutos.',
+    peerHead: 'Comunicados por uma instância par',
+    peerOrgs: '{n} organização',
+    peerOrgsPlural: '{n} organizações',
+    peerNote:
+      '{n} dispositivos em máquinas emparelhadas. Uma instância par envia um nome e com o que tem falado, nunca um endereço físico, um fabricante ou os serviços que anuncia, pelo que não podem ser ajuramentados, vigiados nem analisados a partir daqui.',
+    searchPlaceholder: 'Procurar dispositivos',
+    online: 'Online',
+    offline: 'Offline',
+    thisMachine: 'Esta máquina',
+    pairedPeer: 'Emparelhado',
+    pairedElsewhere: 'e {count} emparelhados noutro local',
+    gateway: 'Gateway',
+    devices: 'dispositivos',
+    showOffline: 'Mostrar dispositivos offline',
+    colDevice: 'Dispositivo',
+    colType: 'Tipo',
+    colAddress: 'Endereço',
+    colVendor: 'Fabricante',
+    colLastSeen: 'Visto pela última vez',
+    hardwareAddress: 'Endereço de hardware',
+    randomized: 'Aleatório',
+    randomizedHelp: 'Este dispositivo usa um endereço privado que muda entre redes. Nesta rede mantém-se igual.',
+    hostname: 'Nome de anfitrião',
+    model: 'Modelo',
+    services: 'Oferece',
+    addresses: 'Endereços',
+    firstSeen: 'Visto pela primeira vez',
+    noServices: 'Nada anunciado',
+    identifiedBy: 'Identificado como {type} a partir de {evidence}',
+    close: 'Fechar',
+  },
+
+  deviceType: {
+    'this-machine': 'Esta máquina',
+    router: 'Router',
+    printer: 'Impressora',
+    tv: 'Televisor',
+    speaker: 'Coluna',
+    phone: 'Telemóvel',
+    tablet: 'Tablet',
+    computer: 'Computador',
+    'single-board-computer': 'Computador de placa única',
+    nas: 'Armazenamento em rede',
+    camera: 'Câmara',
+    'games-console': 'Consola de jogos',
+    'smart-home': 'Dispositivo domótico',
+    unknown: 'Não reconhecido',
+  },
+
+  evidence: {
+    service: 'o que anuncia',
+    model: 'o nome do modelo',
+    vendor: 'o fabricante',
+    gateway: 'ser o gateway desta rede',
+    self: 'ser esta máquina',
+  },
+
+  health: {
+    title: 'As observações não estão a ser guardadas',
+    body: 'O LAN Sheriff vê atividade na rede mas não a consegue guardar, por isso esta vista está desatualizada. O erro foi: {error}',
+    failures: '{count} escritas falhadas seguidas',
+  },
+
+  deputize: {
+    deputize: 'Nomear ajudante',
+    watch: 'Vigiar',
+    clear: 'Repor',
+    deputized: 'Ajudante',
+    watched: 'Vigiado',
+    unknown: 'Sem juízo',
+    trustHelp: 'Os dispositivos nomeados ajudantes reduzem a suspeita. Os vigiados aumentam-na.',
+    label: 'Nome',
+    labelPlaceholder: 'Como chama a este dispositivo',
+    notes: 'Notas',
+    notesPlaceholder: 'Algo que valha a pena recordar',
+    save: 'Guardar',
+    saved: 'Guardado',
+    saveFailed: 'Não foi possível guardar',
+    type: 'Tipo',
+    typeAuto: 'Determinar automaticamente',
+    typeHelp: 'Defina-o você mesmo se a dedução estiver errada.',
+  },
+
+  freshness: {
+    updatedJustNow: 'Atualizado agora mesmo',
+    updatedAgo: 'Atualizado há {ago}',
+    refreshNow: 'Atualizar agora',
+    refreshing: 'A atualizar…',
+    nextIn: 'Próxima verificação em {seconds} s',
+  },
+
+  precinct: {
+    thisNetwork: 'Nesta rede',
+    destinations: 'Destinos',
+    connections: '{count} ligações',
+    truncated: '{count} destinos menos ativos não mostrados',
+    empty: 'Ainda não há nada para mapear.',
+    emptyHint: 'O mapa vai-se preenchendo à medida que os dispositivos desta rede estabelecem ligações.',
+    firstContact: 'Não visto antes deste período',
+  },
+
+  help: {
+    title: 'Ajuda',
+    subtitle: 'Como o LAN Sheriff funciona e o que consegue ou não ver',
+    startTitle: 'Comece aqui',
+    startMode: 'Esta instalação está a correr em {mode} neste momento.',
+    startSees: 'O que consegue ver daqui',
+    startDo: 'Para ver mais',
+    seeApps: 'Que aplicação nesta máquina abriu cada ligação',
+    seeDevices: 'Outros dispositivos na sua rede',
+    seeDNS: 'Consultas DNS, quando não estão cifradas',
+    seeVolumes: 'Quantos dados cada ligação transportou',
+    seeInventory: 'Uma lista dos dispositivos encontrados',
+    whatTitle: 'O que é isto',
+    whatBody: 'O LAN Sheriff observa o que sai da sua rede e diz-lhe para onde vai. Funciona inteiramente nesta máquina. Nada é enviado, não há conta, e funciona sem ligação à Internet, exceto para atualizar os dados de localização e reputação.',
+    modesTitle: 'Os dois modos',
+    deputyBody: 'O modo Ajudante lê as tabelas de ligações que o seu sistema operativo já mantém. Não precisa de permissões especiais e consegue nomear a aplicação por detrás de cada ligação, mas só vê esta máquina.',
+    patrolBody: 'O modo Patrulha captura pacotes da própria rede. Onde tem um ponto de observação (o seu roteador ou uma porta espelho) vê todos os dispositivos da sua rede e as suas consultas DNS; sem isso, um switch mostra apenas o tráfego desta máquina. Não consegue dizer que aplicação é responsável, e precisa de permissão para capturar.',
+    patrolHow: 'Os dois complementam-se, não são etapas. As versões descarregadas incluem a captura de pacotes; no macOS e no Linux, inicie com privilégios elevados para usar o modo Patrulha.',
+    viewsTitle: 'As vistas',
+    watchtowerBody: 'A Torre de Vigia coloca cada ligação de saída num mapa-múndi, para ver de relance para onde vai o seu tráfego.',
+    chatterBody: 'As Ondas listam os nomes de domínio que a sua rede consulta. Requer o modo Patrulha, ou que esta máquina seja o resolvedor DNS da rede.',
+    precinctBody: 'O Mapa da Zona desenha a sua rede como um diagrama: os seus dispositivos no centro e as organizações contactadas à volta.',
+    rosterBody: 'O Registo reúne todos os dispositivos encontrados na sua rede, com o fabricante, o que aparentam ser e o que anunciam.',
+    wantedBody: 'A Lista de Procurados assinala comportamentos que merecem um segundo olhar e explica cada um numa frase que pode confirmar.',
+    trustTitle: 'Nomear ajudantes e vigiar',
+    trustBody: 'Nomeie ajudante um dispositivo em que confia e isso contará a favor dele mais tarde. Vigie um que lhe levante dúvidas e será avaliado com mais rigor. Nenhuma das ações bloqueia seja o que for: o LAN Sheriff observa, não impõe.',
+    privacyTitle: 'Privacidade',
+    privacyBody: 'Tudo fica nesta máquina. O LAN Sheriff não tem sistema de contas, não envia telemetria e nunca envia o seu tráfego. Algumas coisas chegam à Internet, e todas elas estão listadas aqui.',
+    privacyOutboundTitle: 'Tudo o que sai desta máquina',
+    privacyOutboundBody: 'Esta é a lista completa. As bases de dados de localização e de domínios são transferidas em segundo plano como ficheiros comuns, o que informa esses fornecedores de que alguém transferiu um ficheiro e nada sobre a sua rede. O endereço público da sua rede é consultado uma vez, para que o mapa tenha um ponto de partida. As notificações e a partilha entre pares não enviam nada enquanto não as ativar. Não há conta, nem telemetria, nem estatísticas de utilização, nem verificação de atualizações.',
+    privacyOutboundRegistration: 'Um deles é diferente, e é o que vale a pena conhecer. Quando abre um ponto remoto e pergunta a quem pertence, esse único endereço é enviado ao registo de endereços da Internet e depois ao registo regional que o administra, pelo que esses dois ficam a saber que ponto remoto estava a consultar. Acontece apenas quando o pede, uma vez por ponto remoto, e nunca por iniciativa própria.',
+    privacyOutboundOffline: 'Iniciar o LAN Sheriff sem ligação interrompe tudo isto: nenhuma transferência, nenhuma consulta de endereço e nenhuma consulta de registo.',
+    privacyPeeringTitle: 'O que muda quando liga a Central',
+    privacyPeeringBody: 'A partilha entre pares é a única funcionalidade que retira dados desta máquina, e por isso fica desligada até que a ligue. Envia resumos horários (um dispositivo, uma organização, um país, uma aplicação e contagens) para instâncias que emparelhou explicitamente, levando um código de uma para a outra. Nunca envia endereços, nomes de anfitrião, os domínios que consultou, nem seja o que for sobre uma ligação individual. Não há servidor pelo meio: as duas máquinas falam directamente uma com a outra, na sua própria rede, e nada chega a terceiros. Desemparelhar apaga tudo o que esse par lhe enviou.',
+    dataTitle: 'Onde ficam os seus dados',
+    dataBody: 'As observações são guardadas num único ficheiro de base de dados nesta máquina, com tamanho limitado e limpeza automática à medida que enche. Pode alterar o tempo de retenção, ou apagar tudo, nas Definições.',
+    creditsTitle: 'De onde vêm os dados',
+    creditsBody: 'O LAN Sheriff só é útil porque outras pessoas publicam bons dados. Parte vem dentro do programa; o resto é descarregado uma vez em segundo plano. Essas descargas dizem ao fornecedor que alguém obteve um ficheiro e mais nada, todas as consultas seguintes acontecem nesta máquina.',
+    creditsOUI: 'O registo público de prefixos de endereços de hardware',
+    sweepTitle: 'Encontrar dispositivos silenciosos',
+    sweepBody: 'Para encontrar dispositivos que nunca falam com esta máquina, o LAN Sheriff envia um pacote muito pequeno a cada endereço da sua própria rede, algumas vezes por hora. É assim que o sistema operativo aprende os respetivos endereços de hardware. Nada é enviado para fora da sua rede, e pode ser desligado:',
+    findingsTitle: 'Ler a Lista de Procurados',
+    findingsBody: 'Um achado é algo que o LAN Sheriff notou e que talvez queira verificar. Não é uma acusação, e nada é alguma vez bloqueado. Cada um explica-se numa frase que pode confirmar: se reconhece o dispositivo e o comportamento, aí está a resposta.',
+    findingsScore: 'A barra mostra a pontuação combinada de um dispositivo. Vários achados pequenos sobre o mesmo dispositivo pesam mais do que um único maior, que costuma ser o caso mais revelador. O número exato não é significativo; a comparação entre linhas é.',
+    findingsActions: 'Arquivar afasta um achado que já viu. Confiar marca ainda o dispositivo como ajudante, o que reduz a suspeita sobre ele no futuro.',
+    rulesTitle: 'O que as regras procuram',
+    ruleNewDevice: 'Aparece na sua rede um dispositivo que nunca ali tinha sido visto. Suprimido nos primeiros dez minutos após a instalação, quando tudo é novo.',
+    ruleFirstContact: 'Um dispositivo contacta uma organização que nunca tinha contactado. Pontuado pelo quão invulgar isso é para aquele dispositivo: um portátil conhece organizações novas a toda a hora e é ignorado, enquanto um aparelho com três conhecidas que contacta uma quarta merece atenção.',
+    ruleBeaconing: 'Um dispositivo contacta o mesmo destino em intervalos muito regulares. É assim que o software malicioso controlado à distância comunica, e também como funciona muito software vulgar, por isso o achado indica o intervalo e a contagem e deixa-lhe o reconhecimento.',
+    ruleRareDestination: 'Um dispositivo contacta uma parte da internet que esta rede praticamente nunca usa, medido pelo seu próprio histórico. Não existe qualquer lista de países suspeitos; a comparação é sempre com o que é normal aqui.',
+    ruleDga: 'Um dispositivo consulta vários nomes de domínio gerados automaticamente que não existem. O software malicioso que não pode fixar o seu servidor de controlo adivinha nomes até um responder. Nomes que resolvem são ignorados por mais estranhos que pareçam, porque as redes de distribuição usam constantemente nomes de aspeto aleatório.',
+    rulePortScan: 'Um dispositivo sonda muitas portas numa máquina, ou uma porta em muitas máquinas, e a maioria das tentativas é recusada. Software que toca muitas portas e liga com sucesso está a trabalhar, não a varrer, e é ignorado, tal como a verificação de portas do próprio LAN Sheriff.',
+    rulePlaintext: 'Um dispositivo envia credenciais ou dados privados pela internet sem cifra, Telnet, FTP, correio sem cifra ou um protocolo de base de dados. O HTTP simples não é assinalado de propósito: é constante em qualquer rede saudável e o utilizador raramente pode fazer algo quanto ao redireccionamento de terceiros.',
+    ruleVolume: 'Um dispositivo faz muito mais do que o habitual, medido pelo seu próprio histórico e não por um limiar fixo. Contado em ligações, já que o modo Ajudante não vê contagens de bytes. Precisa primeiro de alguns dias de histórico: caso contrário, um portátil calmo à noite e activo de manhã seria assinalado todos os dias.',
+    ruleThreatList: 'Um dispositivo consulta um domínio que consta de uma lista pública de servidores maliciosos conhecidos. É a única regra que não precisa de histórico: todas as outras têm de aprender primeiro o que é normal na sua rede, ao passo que um servidor já apanhado por outros não fica mais suspeito por ser raro aqui. Precisa, isso sim, de ver as consultas DNS, o que implica o modo Patrulha, no modo Ajudante não tem nada para ler e mantém-se em silêncio. Os domínios de publicidade e de rastreio são assinalados pelas mesmas listas e deliberadamente não são comunicados aqui: são comuns, constantes, e sepultariam os achados que importam.',
+    rulesQuiet: 'As regras que avaliam o que é normal aqui ficam caladas no primeiro dia, e algumas precisam de mais histórico. Uma Lista de Procurados vazia numa rede saudável é o resultado esperado.',
+    emptyTitle: 'Porque é que um ecrã está vazio',
+    emptyBody: 'As Ondas precisam do modo Patrulha, ou que esta máquina seja o resolvedor DNS da rede. A Lista de Procurados está vazia enquanto nada atingir o limiar de uma regra, o que é o estado normal. O Registo e o Mapa da Zona preenchem-se nos primeiros minutos.',
+    patrolTitle: 'Ligar o modo Patrulha',
+    patrolMac: 'No macOS, inicie o LAN Sheriff com direitos de administrador. A captura de pacotes precisa de acesso aos dispositivos BPF, que os utilizadores comuns não têm.',
+    patrolLinux: 'No Linux, inicie-o com direitos de administrador, ou conceda uma vez as permissões de captura ao binário e execute-o normalmente depois.',
+    patrolWindows: 'No Windows, instale o Npcap e execute o LAN Sheriff como Administrador. Sem o Npcap a aplicação continua a funcionar, em modo Ajudante.',
+    optionsTitle:
+      'Opções que vale a pena conhecer',
+    optionsIntro:
+      'Tudo corre sem opção nenhuma. Estas são aquelas a que se recorre; o programa mostra as restantes:',
+    optListen:
+      'Onde escutar. Por omissão, apenas esta máquina.',
+    optPassword:
+      'Pedir palavra-passe mesmo nesta máquina. Já é exigida em qualquer outra ligação.',
+    optDataDir:
+      'Onde vive a base de dados. Útil para a manter num sítio com cópia de segurança, ou para ler uma cópia.',
+    optOffline:
+      'Mostrar uma base existente sem observar nada: sem captura, sem descoberta, sem consultas. É o modo para ler um registo depois do facto.',
+    optCityDB:
+      'Obter a base de localização com precisão de cidade. 62 MB para descarregar e 125 MB em disco, e por isso não vem por omissão.',
+    optInterface:
+      'Em que interface o Modo patrulha captura. Escolhida automaticamente caso contrário, e as Definições mostram o que encontrou.',
+    optPromiscuous:
+      'Deixar de pedir à interface o tráfego não dirigido a esta máquina. Alguns adaptadores e máquinas virtuais portam-se mal em modo promíscuo.',
+    optProxy:
+      'Aceitar este cabeçalho Host numa ligação local, para um proxy inverso que termina o TLS à frente. Repetível.',
+    notifyTitle:
+      'Ser avisado, em vez de vigiar',
+    notifyBody:
+      'Os achados podem ser enviados para algum lado em vez de esperarem que alguém repare. Os quatro estão desligados a não ser que passe um, e cada um envia apenas o achado: o que se notou, que dispositivo, e a pontuação. Nenhum tráfego, nenhum endereço, e mais nada sai da máquina.',
+    notifyScore:
+      'A fasquia é uma pontuação de 0,6 por omissão. Baixe-a para saber de mais, suba-a para saber de menos.',
+    thisTitle:
+      'Esta instalação',
+    thisPlatform:
+      'Plataforma',
+    thisBuild:
+      'Compilação',
+    thisVersion:
+      'Versão',
+    thisDatabase:
+      'Base de dados',
+    buildStandardIs:
+      'Padrão, com a captura de pacotes incorporada',
+    buildPortableIs:
+      'Portátil, portanto apenas Modo delegado',
+    buildPortableOnlyIs:
+      'Portátil. Não há compilação com captura publicada para esta plataforma, pelo que aqui o Modo delegado é todo o produto.',
+    buildFromSource:
+      'compilada a partir do código',
+    installTitle:
+      'Instalar noutra máquina',
+    installIntro:
+      'O mesmo programa corre em todas estas. Cada comando abaixo instala a compilação padrão, confere a soma publicada e escolhe o ficheiro certo para a máquina onde corre, por isso nenhum precisa da lista mais abaixo.',
+    installLinuxPkg:
+      'Debian, Ubuntu, Fedora, RHEL e Alpine. Leve primeiro o pacote da sua arquitetura da página de versões. Prefira-os ao arquivo: trazem um serviço que concede o privilégio de captura sem correr o programa todo como root.',
+    installOther:
+      'Tudo o resto, incluindo um Raspberry Pi. O instalador verifica a soma publicada antes de instalar seja o que for e não há opção para saltar isso, o que convém saber antes de encaminhar qualquer script para uma shell.',
+    installDocker:
+      'Docker. A rede em modo anfitrião não é opcional aqui: um contentor na ponte por omissão observa a rede do próprio Docker, portanto o painel arranca e não encontra nada seu.',
+    installByHandTitle:
+      'Descarregar à mão',
+    installByHand:
+      'Uma versão traz duas dúzias de ficheiros, e algumas plataformas recebem duas compilações do mesmo programa. É a única razão para ler a lista:',
+    buildStandard:
+      'Padrão',
+    buildPortable:
+      'Portátil',
+    buildNeeds:
+      'Precisa de',
+    buildBuiltFor:
+      'Compilada para',
+    buildStandardNeeds:
+      'Npcap no Windows. Nada no macOS nem no Linux.',
+    buildPortableNeeds:
+      'Absolutamente nada',
+    buildYes:
+      'Sim',
+    buildNoDeputy:
+      'Não, apenas Modo delegado',
+    installPick:
+      'Leve a compilação padrão a menos que a sua plataforma apareça só na coluna portátil. A portátil existe para os sítios que uma compilação com captura não alcança: FreeBSD, que é o que o pfSense e o OPNsense são, ARM de 32 bits, que são os Raspberry Pi mais antigos, e Windows em ARM. Escolher mal tem remédio e nota-se, porque esta página nomeia a compilação que está mesmo a correr.',
+    pairingTitle:
+      'Emparelhar duas máquinas',
+    pairingIntro:
+      'A partilha entre instâncias está desligada até a ligar, e ligá-la não partilha nada por si só. O emparelhamento é uma troca única de um código que o próprio leva de uma máquina à outra, e é isso que dispensa qualquer servidor pelo meio. As duas máquinas têm papéis diferentes: uma mostra um código, a outra escreve-o.',
+    pairingStep1:
+      'Ative a partilha entre instâncias n A Central nas duas máquinas. Nenhuma partilha ainda o que quer que seja.',
+    pairingStep2:
+      'Numa máquina escolha Mostrar um código. Aparece um código e o endereço que as outras instâncias devem usar para lhe chegar. Deixe essa janela aberta: o código dura quinze minutos e, quando expira, há um botão para pedir outro.',
+    pairingStep3:
+      'Na outra máquina escolha Introduzir um código e indique o endereço e o código da primeira. É esta a máquina que faz a ligação, portanto é a que tem de conseguir alcançar a outra.',
+    pairingReach:
+      'O emparelhamento liga duas máquinas e fica por aí. Se esta máquina estiver emparelhada com outras duas, essas duas continuam sem se ver: uma instância par comunica apenas o que observa e nada passa por uma terceira. Emparelhe tudo com uma só máquina e essa vê-las-á a todas com menos passos, ou emparelhe cada par se todas tiverem de se ver.',
+    pairingTrouble:
+      'Se disser que não conseguiu alcançar esse endereço, verifique o endereço antes do código. As máquinas emparelhadas falam pela porta 2912 e não pela do painel, e uma instância que só escuta na própria máquina não pode ser alcançada de fora. Os códigos servem uma vez só: uma segunda tentativa precisa de um novo.',
+    pairingTailscale:
+      'Se nada responder de todo, verifique se o Tailscale está a correr na máquina que mostra o código. A definição «Bloquear ligações de entrada» descarta o tráfego de entrada em todas as interfaces, incluindo a sua própria rede, enquanto o tráfego de saída continua a funcionar, pelo que a máquina parece estar em linha e recusa o emparelhamento na mesma.',
+    updateTitle:
+      'Atualizar para uma versão mais recente',
+    updateBody:
+      'Uma atualização é um único ficheiro. Pare o LAN Sheriff, coloque o novo binário onde estava o antigo e volte a iniciá-lo. O seu histórico, a sua palavra-passe e os seus emparelhamentos ficam no diretório de dados e não no binário, por isso substituí-lo não lhes toca.',
+    updateMac:
+      'No macOS, apague o ficheiro antigo antes de copiar o novo para o lugar. O macOS guarda uma assinatura para aquele ficheiro, e copiar por cima deixa esse registo a descrever um conteúdo que já não existe, pelo que a nova cópia é terminada no instante em que arranca, sem mensagem nenhuma. Parece exatamente uma transferência corrompida e não é.',
+    updateLinux:
+      'No Linux, substituir o ficheiro apaga a capacidade que permite ao Modo Patrulha capturar, porque a capacidade pertence ao ficheiro e não ao nome. Conceda-a de novo após cada atualização, ou execute o LAN Sheriff como serviço systemd com AmbientCapabilities, que sobrevive a uma atualização porque a capacidade é concedida no arranque em vez de ficar guardada no ficheiro.',
+    updateWindows:
+      'No Windows, pare-o primeiro: um programa em execução não pode ser substituído. O Npcap instala-se à parte e uma atualização não o afeta.',
+    updateCheck:
+      'Depois confirme o que está mesmo a correr. O número de compilação sobe a cada alteração, por isso é a forma mais rápida de distinguir uma atualização bem-sucedida de uma cópia que silenciosamente não aconteceu.',
+    remoteTitle:
+      'Abrir o painel a partir de outra máquina',
+    remoteBody:
+      'Por omissão o LAN Sheriff escuta apenas nesta máquina, e por isso uma instalação nova num servidor ou num Raspberry Pi recusa as ligações do seu portátil. É a definição segura por omissão e não uma avaria. Para lhe chegar de outro sítio, arranque-o ligado a um endereço que a sua rede veja:',
+    remotePassword:
+      'Quem conseguir alcançar essa porta poderá ler o que a sua rede andou a fazer, por isso defina uma palavra-passe ao mesmo tempo. O LAN Sheriff exige-a para qualquer ligação além desta máquina, e a primeira página que abrir pedir-lhe-á que a escolha.',
+    cliTitle:
+      'Sem o painel',
+    cliBody:
+      'O painel desenha no seu navegador tabelas vivas e um mapa a partir de dados que esta máquina já tem, em vez de servir uma página de cada vez, pelo que precisa de JavaScript. Se preferir não usar um navegador, ou se mantiver os scripts desligados, os mesmos dados estão disponíveis a partir de um terminal.',
+    cliStatus:
+      'O que esta máquina partilha, e com quem. Não precisa de palavra-passe, nem de privilégios, nem de um servidor a correr, por isso responde mesmo quando mais nada responde.',
+    cliExport:
+      'Todos os destinos vistos, como folha de cálculo. Use format=json para um script, ou view=flows para ligações individuais. Os mesmos dois ficheiros estão na barra de ferramentas de qualquer vista.',
+    cliNoJS:
+      'Um navegador com o JavaScript desligado não fica perante um ecrã vazio. Recebe uma página que explica por que razão o painel precisa dele, o que carrega e o que não carrega, e estes mesmos comandos, na sua língua.',
+  },
+
+  widgets: {
+    nowTitle: 'Neste momento',
+    upFor: 'Ativo há {time}',
+    tallyTitle: 'Últimas 24 horas',
+    newOrgs: '{count} destinos novos',
+    newDevices: '{count} dispositivos novos',
+    nothingNew: 'Nada de novo',
+    loudest: 'O mais ativo',
+    quietest: 'Mais calmo por volta das {hour}',
+    devicesOnline: '{online} de {known} online',
+    needHistory: 'Ainda não há histórico suficiente',
+    connections: '{count} ligações',
+  },
+
+  wanted: {
+    wantedTitle: 'Mais procurados',
+    allQuiet: 'Tudo calmo',
+    allQuietSub: 'Nada que mereça um segundo olhar.',
+    andMore: 'e mais {count}',
+    wantedCount: '{count} procurados',
+  },
+
+  rule: {
+    new_device: 'Dispositivo novo',
+  },
+
+  scan: {
+    checkPorts: 'Verificar portas',
+    checkFailed: 'Não foi possível verificar as portas',
+    checking: 'A verificar…',
+    checkedResult: '{open} de {checked} portas responderam',
+    checkHelp: 'Abre e fecha uma ligação a {count} portas comuns deste dispositivo. Nada é enviado.',
+    sourceScan: 'respondeu quando perguntado',
+    sourceObserved: 'visto no tráfego',
+    sourceAdvertised: 'anunciado',
+  },
+
+  wantedList: {
+    peerNote:
+      'Os achados dizem respeito ao que esta máquina observou. Uma instância par envia totais por hora e não o detalhe que estas regras leem, por isso os seus dispositivos nunca são julgados aqui.',
+    title: 'A Lista de Procurados',
+    subtitle: 'Comportamentos que merecem um segundo olhar',
+    empty: 'Nada procurado',
+    emptySub: 'Nada nesta rede se comporta de forma a merecer destaque.',
+    allClear: 'Tudo em ordem',
+    clear: 'Arquivar',
+    trust: 'Confiar',
+    cleared: 'Arquivado',
+    why: 'Porquê',
+    subjectDevice: 'Dispositivo',
+    openFindings: '{count} em aberto',
+    seen: 'Visto pela última vez',
+    firstSeen: 'Visto pela primeira vez',
+    e_new_device: 'Apareceu nesta rede pela primeira vez.',
+    e_first_contact: 'Contactou {org} pela primeira vez. Este dispositivo contactou {known_orgs} organizações em {observed_days} dias.',
+    e_beaconing: 'Ligou-se a {org} a cada {interval}, {hits} vezes, com {regularity} % de regularidade.',
+    e_rare_destination: 'Contactou {country}, que representa {share_pct} % do tráfego desta rede.',
+    e_dga_domain: 'Fez {names} consultas a nomes de domínio gerados automaticamente que não existem, como {example}.',
+    e_port_scan_v: 'Sondou {ports} portas em {target}, das quais {connected} responderam.',
+    e_port_scan_h: 'Sondou a porta {port} em {hosts} dispositivos, dos quais {connected} responderam.',
+    e_plaintext: 'Enviou tráfego {protocol} sem cifra para {org}, {hits} vezes.',
+    e_volume_anomaly: 'Estabeleceu {connections} ligações numa hora, cerca de {times} vezes as suas {typical} habituais.',
+    e_threat_list_r: 'Contactou {domain}, um nome que consta de uma lista pública de software malicioso, {hits} vezes.',
+    e_threat_list_u: 'Tentou contactar {domain}, um nome que consta de uma lista pública de software malicioso, {hits} vezes. O nome não resolveu.',
+  },
+
+  ruleName: {
+    new_device: 'Dispositivo novo',
+    first_contact: 'Primeiro contacto',
+    beaconing: 'Sinal regular',
+    rare_destination: 'Destino invulgar',
+    dga_domain: 'Nomes de domínio adivinhados',
+    port_scan: 'Varrimento de portas',
+    plaintext: 'Tráfego sem cifra',
+    volume_anomaly: 'Volume invulgar',
+    threat_list: 'Servidor malicioso conhecido',
+  },
+
+  bolo: {
+    title: 'Algo que merece atenção',
+    view: 'Abrir',
+    dismiss: 'Dispensar',
+    more: 'e mais {count}',
+  },
+
+  msg: {
+    deputy_only:
+      'O Modo delegado mostra apenas esta máquina. O Modo patrulha acrescenta todos os outros dispositivos da rede, o fluxo DNS e o mapa completo. Precisa de permissão de captura e, no Windows, também de Npcap; a Ajuda indica o seu caso.',
+    deputy_unsupported: 'O modo delegado ainda não está disponível nesta plataforma, então as conexões desta máquina não podem ser lidas.',
+    patrol_no_privilege:
+      'O Modo patrulha não consegue abrir uma interface de captura, pelo que só esta máquina é visível. No Windows instale o Npcap a partir de https://npcap.com e execute como Administrador; nos restantes, conceda a permissão de captura.',
+    patrol_no_privilege_linux:
+      'O Modo patrulha não consegue abrir uma interface de captura, por isso só esta máquina é visível. Conceda a capacidade de captura com o comando abaixo, ou execute-o como root.',
+    patrol_no_privilege_macos:
+      'O Modo patrulha não consegue abrir uma interface de captura, por isso só esta máquina é visível. A captura precisa de acesso aos dispositivos BPF, o que costuma significar iniciá-lo com sudo.',
+    patrol_no_privilege_windows:
+      'O Modo patrulha não consegue abrir uma interface de captura, por isso só esta máquina é visível. Instale o Npcap a partir de https://npcap.com e execute o LAN Sheriff como Administrador.',
+    patrol_needs_vantage: 'A observar o tráfego deste computador. Outros dispositivos da sua rede só aparecerão se este computador conseguir ver o tráfego deles, o que normalmente implica ligá-lo ao router ou a um switch configurado para copiar tráfego. A maioria das redes domésticas não faz isto, e é normal.',
+    patrol_not_built: 'Esta versão foi compilada sem captura de pacotes, então vê apenas esta máquina. Os binários oficiais a incluem; se você compilou do código-fonte, recompile com a captura ativada.',
+    patrol_portable:
+      'Esta é a versão portátil, que troca a captura de pacotes pela capacidade de correr em qualquer lado. Vê apenas esta máquina. A transferência padrão para a sua plataforma inclui captura: https://github.com/291-Group/LAN-Sheriff/releases',
+    patrol_portable_only:
+      'Esta é a versão portátil. Não é publicada nenhuma versão com captura de pacotes para esta plataforma, pelo que o Modo patrulha não está disponível aqui e vê apenas esta máquina.',
+    offline_record: 'Nada está a ser capturado. Este é um registo armazenado, por isso não vai mudar enquanto o consulta.',
+    no_byte_counts: 'Volumes de tráfego não ficam disponíveis no modo delegado: o sistema informa conexões, não quantidades. O modo patrulha mede diretamente.',
+    dns_needs_patrol:
+      'As consultas DNS só são visíveis no Modo patrulha, ou quando esta máquina é o resolvedor da rede. O Modo patrulha precisa de permissão de captura e, no Windows, também de Npcap; a Ajuda indica o seu caso.',
+    auth_required: 'Faça login.',
+    setup_required: 'Uma senha precisa ser criada primeiro.',
+    password_already_set: 'Uma senha já foi definida.',
+    password_too_short: 'Essa senha é curta demais.',
+    password_too_long: 'Essa senha é longa demais.',
+    wrong_password: 'Senha incorreta.',
+    locked_out: 'Tentativas malsucedidas demais. Aguarde alguns minutos antes de tentar de novo.',
+    bad_request: 'Não foi possível ler essa solicitação.',
+    retention_invalid: 'A retenção precisa de ao menos 1 hora de detalhe, 1 dia de histórico e 16 MB de armazenamento.',
+    unknown_view: 'Visão desconhecida.',
+    not_found: 'Não encontrado.',
+    not_an_address: 'Isso não é um endereço.',
+    rdap_disabled: 'Consultas de registro não estão habilitadas.',
+    internal: 'Algo deu errado.',
+    whatThisMeans: 'O que este modo consegue ver',
+  },
+
+  banner: {
+    deputyHint:
+      'O modo delegado mostra apenas esta máquina. O modo patrulha acrescenta todos os outros dispositivos da rede, o fluxo de DNS e o mapa completo da rede.',
+  },
+}

@@ -1,0 +1,61 @@
+[Unit]
+Description=LAN Sheriff, a self-hosted network monitor
+Documentation=https://github.com/291-Group/LAN-Sheriff
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=lan-sheriff
+Group=lan-sheriff
+
+# **Capabilities rather than root, and ambient rather than file capabilities.**
+#
+# Packet capture needs CAP_NET_RAW, and CAP_NET_ADMIN to put the interface into
+# promiscuous mode. Ambient capabilities hand them to the process directly, so
+# the binary itself carries no setcap bits: a file with capabilities cannot be
+# executed at all where those capabilities are absent, which is a failure mode
+# already met once in the container image.
+#
+# Everything else is dropped. This service reads packets and writes one database.
+AmbientCapabilities=CAP_NET_RAW CAP_NET_ADMIN
+CapabilityBoundingSet=CAP_NET_RAW CAP_NET_ADMIN
+NoNewPrivileges=yes
+
+# Bound to localhost by default, which is the setting most likely to be wrong
+# for somebody running this on a headless machine and the only one that is safe
+# to ship. Reaching it from elsewhere means editing this line, and the dashboard
+# then refuses to serve anything until a password is set. Both halves of that
+# are deliberate.
+ExecStart=/usr/bin/lan-sheriff serve \
+    --listen 127.0.0.1:2911 \
+    --data-dir /var/lib/lan-sheriff \
+    --open=false
+
+Restart=on-failure
+RestartSec=5s
+
+# The record of somebody's network lives here and nowhere else, so the service
+# gets write access to exactly one directory and read-only everything else.
+StateDirectory=lan-sheriff
+StateDirectoryMode=0700
+ReadWritePaths=/var/lib/lan-sheriff
+
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=no
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+
+# PrivateDevices is off above on purpose: capture needs the packet socket, and
+# turning it on removes access to it. The rest of the hardening stands.
+
+[Install]
+WantedBy=multi-user.target

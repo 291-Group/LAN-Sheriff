@@ -1,0 +1,718 @@
+import type { Catalog } from './en'
+
+// Simplified Chinese.
+export const zh: Catalog = {
+  meta: { name: '中文', dir: 'ltr' },
+
+  app: {
+    name: 'LAN Sheriff',
+    org: '291 Group',
+    byOrg: '由 291 Group 出品',
+    motto: '离开小镇的一切，都逃不过眼睛。',
+    privacy: 'LAN Sheriff 只留在这台设备上。',
+    noTelemetry: '无需账号，不上云，无遥测。',
+    build: '构建 {n}',
+    privacyPeeringNone: '设备间共享已开启，但尚未配对任何设备。',
+    privacyPeering: '与 {count} 台已配对设备共享。',
+    privacyPeeringPlural: '与 {count} 台已配对设备共享。',
+  },
+
+  nav: {
+    watchtower: '瞭望塔',
+    watchtowerSub: '外发流量地图',
+    chatter: '无线电',
+    chatterSub: 'DNS 活动',
+    precinct: '辖区地图',
+    precinctSub: '网络拓扑',
+    roster: '花名册',
+    rosterSub: '设备清单',
+    wanted: '通缉名单',
+    wantedSub: '可疑度分析',
+    help: '帮助',
+    helpSub: '使用说明',
+    comingIn: '将在阶段 {milestone} 推出',
+    notInBuild: '{name} 尚未包含在此版本中。',
+    milestone: '阶段 {milestone}',
+  },
+
+  status: {
+    deputyMode: '副警长模式',
+    patrolMode: '巡逻模式',
+    offlineMode: '正在查看记录',
+    starting: '正在启动',
+    reconnecting: '正在重新连接',
+    destinations: '目的地',
+    countries: '个国家',
+    connections: '连接数',
+    live: '进行中',
+    latestOut: '最近外发',
+    nothingYet: '暂无记录',
+    latestTooltip: '最近观察到的一次外发连接',
+  },
+
+  actions: {
+    switchToDark: '切换到深色主题',
+    switchToLight: '切换到浅色主题',
+    settings: '设置',
+    signOut: '退出登录',
+    dismiss: '关闭提示',
+    close: '关闭',
+    loading: '正在载入',
+    cancel: '取消',
+    save: '保存设置',
+    saved: '已保存',
+    language: '语言',
+    whatModeSees: '此模式能看到什么',
+    runThis: '请运行',
+    copy: '复制',
+    copied: '已复制',
+    paste: '粘贴',
+    pasteBlocked: '请按 Ctrl+V',
+  },
+
+  toolbar: {
+    searchPlaceholder: '搜索目的地、应用、机构',
+    exportCsv: '将当前视图下载为 CSV',
+    exportJson: '将当前视图下载为 JSON',
+    clearAll: '全部清除',
+    removeFilter: '移除此筛选',
+    scrubbed: '历史',
+    backToLive: '返回实时视图',
+    timeRange: '时间范围',
+    filterApp: '应用：{value}',
+    filterCountry: '国家：{value}',
+    filterOrg: '机构：{value}',
+    filterProto: '协议：{value}',
+    filterPort: '端口：{value}',
+    showOnly: '仅显示 {value}',
+  },
+
+  watchtower: {
+    destinations: '目的地',
+    seenIn: '此时段内观察到 {count} 个',
+    volumesNeedPatrol: '统计流量大小需要巡逻模式',
+    watchingTitle: '正在守望',
+    watchingNoTraffic:
+      '尚未观察到外发流量。打开一个浏览器标签页，或让 LAN Sheriff 继续运行片刻，目的地就会陆续出现。',
+    watchingNotLocated:
+      '已观察到连接，但尚未定位。位置数据库仍在下载，准备就绪后目的地将显示在地图上。',
+    noMatch: '没有连接符合当前筛选条件。',
+    noMatchTitle: '没有匹配项',
+    layersLabel: '显示的设备',
+    layerMine: '本机',
+    layerAll: '全部',
+    layerCountryOnly: '对端报告的是国家而非地址，因此这些点位于该国中心。',
+    layerNoDomains:
+      '对等实例从不发送它们查询过的域名，因此无线电闲谈始终只显示本机。该层的其余内容在其他视图中。',
+    originUnknown: '尚未确定本网络自身的位置，因此连线从一个中性的地点出发，而非从您所在之处。位置数据下载完成后即会修正。',
+    recordEmpty:
+      '此记录在所选时间段内没有出站流量。请尝试更大的时间范围。',
+    recordNotLocated:
+      '创建此记录时未确定这些目标的位置，因此地图上不会显示。',
+    originUnknownRecord:
+      '此记录中未保存本网络的位置，因此线条从中性点开始，而不是从您所在的位置开始。',
+    legendYou: '你',
+    zoomIn: '放大',
+    countries: '国家名称与边界',
+    zoomOut: '缩小',
+    legendJustNow: '刚刚',
+    legendActive: '活动中',
+    legendClosed: '已关闭',
+    legendReported: '由对端报告',
+    peerMore: '再显示 {n} 条',
+    attribution: '位置数据',
+    connections: '{count} 个连接',
+    connectionsPlural: '{count} 个连接',
+  },
+
+  rapsheet: {
+    address: '地址',
+    reverseDns: '反向 DNS',
+    organization: '机构',
+    location: '位置',
+    ports: '端口',
+    connections: '连接数',
+    devices: '设备',
+    traffic: '流量',
+    apps: '应用',
+    firstSeen: '首次出现',
+    lastSeen: '最近出现',
+    unknown: '未知',
+    notMeasured: '未统计',
+    outIn: '发出 {out} / 接收 {in}',
+    reportedBy:
+      '报告来源',
+    peerNote:
+      '对等实例只报告组织和国家，从不报告地址，因此这里没有可查的东西：没有地址、没有反向 DNS、没有端口。这些是按小时汇总的结果，而不是单条连接。',
+  },
+
+  gate: {
+    setupTitle: '创建密码',
+    loginTitle: '登录',
+    setupExposed:
+      '此面板可以从您的网络访问，因此在显示任何内容之前需要设置密码。LAN Sheriff 会记录这里每台设备连接过哪些服务器，这样的记录不应让任何找到该地址的人读取。',
+    setupLocal:
+      '请在打开面板前设置密码。LAN Sheriff 会记录这里每台设备连接过哪些服务器，这样的记录不应让使用这台设备的其他人读取。',
+    loginPrompt: '请输入此面板的密码。',
+    password: '密码',
+    confirmPassword: '确认密码',
+    submitSetup: '创建密码并继续',
+    submitLogin: '登录',
+    working: '处理中…',
+    storedAs:
+      '以 bcrypt 哈希形式保存在数据目录中，仅您的用户账户可读。密码不会被发送到任何地方。',
+    tooShort: '密码至少需要 {min} 个字符。',
+    mismatch: '两次输入的密码不一致。',
+    lockedOut: '来自此地址的失败尝试过多。请等待几分钟后重试。',
+    offlineTitle: '无法连接到 LAN Sheriff',
+    offlineWhy:
+      '仪表板已打开，但其后的服务没有响应。它可能仍在启动中。系统会自动持续重试。',
+    offlineRetry: '立即重试',
+    unreachable: '无法连接到 LAN Sheriff。它还在运行吗？',
+    generic: '出现了问题。',
+  },
+
+  settings: {
+    title: '设置',
+    intro:
+      'LAN Sheriff 会在短期内保留完整明细，并将按小时汇总的数据保留更长时间，这样历史记录既有用，数据库又不会无限增长。',
+    rawHours: '保留完整明细的时长（小时）',
+    rollupDays: '保留每小时汇总的时长（天）',
+    maxSize: '数据库最大容量（MB）',
+    currentlyUsing: '当前占用',
+    storedIn: '存储位置',
+    loadFailed: '无法加载设置。',
+    saveFailed: '无法保存设置。',
+    captureTitle: '捕获接口',
+    captureBody:
+      '巡逻模式一次只监视一块网卡。本次安装使用的是下面标出的那块。',
+    captureActive: '使用中',
+    captureRecommended: '会被自动选中',
+    captureOverridden:
+      '本次安装被指定了要使用的网卡，因此没有采用自动选择。',
+    captureChange: '要监视其他适配器，请使用 --interface 和此处显示的名称重新启动。',
+    dangerTitle: '删除全部数据',
+    dangerBody:
+      '将删除迄今记录的所有连接、目的地与汇总数据。您的密码以及这台设备本身的记录会保留。此操作无法撤销。',
+    dangerConfirm: '确认全部删除',
+    dangerButton: '删除全部数据',
+    wipeFailed: '无法删除数据。',
+  },
+
+  dispatch: {
+    title: '调度台',
+    offTitle: '设备间共享已关闭',
+    offBody: '这台设备观测到的内容从未离开过本机。开启共享后，可与配对的实例交换每小时摘要，在完成配对之前不会共享任何内容。',
+    turnOn: '开启对等共享',
+    turnOff: '关闭对等共享',
+    thisMachine: '本机',
+    reachableAt: '对端通过此地址连接',
+    noPeers: '尚未配对任何设备。',
+    noPeersHint: '与另一台 LAN Sheriff 配对，双方都能看到对方所见。',
+    connected: '已连接',
+    unreachable: '无法连接',
+    suspended: '已暂停',
+    stale: '数据已过期',
+    lastSeen: '最后一次收到 {when}',
+    neverSeen: '从未连接',
+    pairButton: '显示代码',
+    pairRoles:
+      '配对需要两台设备做不同的事：一台显示代码，另一台输入代码。',
+    pairTitle: '在另一台设备上输入此代码',
+    pairAddress: '它还需要这个地址',
+    pairExpires: '{time} 后失效',
+    pairExpired: '此代码已失效。',
+    pairNewCode: '显示新代码',
+    pairDiscardAsk:
+      '关闭并作废这个代码吗？另一台机器将需要新的代码。',
+    pairDiscardYes: '放弃该配对码',
+    pairDiscardNo: '保持打开',
+    pairWaiting: '正在等待另一台设备…',
+    pairDone: '已与 {name} 配对。',
+    joinButton: '输入代码',
+    joinTitle: '与正在显示代码的设备配对',
+    joinAddress: '另一台设备的地址',
+    joinCode: '配对代码',
+    joinCodeHint: '大小写均可，连字符会自动添加。',
+    codeRemaining: '还差 {n} 个字符',
+    joinLabel: '本机名称（可选）',
+    joinSubmit: '配对',
+    joinWorking: '正在配对…',
+    errBadCode: '代码不正确。每个代码只能使用一次，请重新获取。',
+    errWrongMachine: '该代码属于另一台设备，与所填地址不符。',
+    errMalformed:
+      '这看起来不是配对码。配对码由八组、每组五个字符组成，显示在另一台机器的“显示配对码”中。请完整复制。',
+    errVersion: '那台设备运行的是另一版本的 LAN Sheriff。',
+    errUnreachable: '无法连接到该地址。',
+    errRefused:
+      '那台机器作出了回应并拒绝了连接，说明地址是对的，只是 2912 端口上没有程序在监听。请确认那边的 LAN Sheriff 正在运行且已开启对等共享。',
+    errRefusedVPN:
+      '对方拒绝了连接，而本机正在运行 VPN。这更可能是原因：带有断网保护、或未允许本地网络访问的 VPN 会阻断到自己网络内设备的流量，而其他一切照常。请在其设置中允许本地网络流量，或暂时关闭它。',
+    errRefusedTailscale:
+      '对方拒绝了连接，而本机正在运行 Tailscale。它的“阻止传入连接”设置会阻止所有网络的入站流量，而不只是 tailnet。请关闭该设置，或确认另一台机器上的 LAN Sheriff 已运行并开启共享。',
+    errOffSubnet:
+      '该地址不属于本机连接的任何网络，因此从这里无法访问。两台机器需要在同一网络中。请在另一台机器的配对界面上核对地址，并确认两台都连到同一个无线网络或同一台路由器。',
+    errDropped:
+      '完全没有任何回应。数据包被静默丢弃，这正是防火墙的做法，而不是回应。请检查那台机器上的防火墙，以及其上运行的 VPN 或安全软件。',
+    errDroppedTailscale:
+      '完全没有任何回应，而本机正在运行 Tailscale。它的“阻止传入连接”设置会丢弃所有网络上的传入流量，而不只是 tailnet，同时出站流量照常工作。请关闭该设置，或检查另一台机器的防火墙。',
+    errDroppedVPN:
+      '完全没有响应，而本机正在运行 VPN。终止开关会丢弃不经过隧道的流量，而你自己网络上的另一台机器正属于此类。请暂时关闭它，或在设置中允许本地网络流量。',
+    errNotShowing:
+      '那台设备可以连通，但目前没有显示配对代码。代码有效期为十五分钟，对话框一关闭即失效，请在那台设备上打开显示代码，并趁代码还在屏幕上时在此输入。',
+    errOff: '本机未启用设备间共享。',
+    suspend: '不再采信此对端',
+    suspendHint: '保留配对关系，但停止合并其数据。当某个对端行为异常时使用；直接解除配对会连带失去对它的观察能力。',
+    resume: '重新信任此对端',
+    unpair: '解除配对',
+    unpairConfirm: '解除配对并删除它发来的全部内容？',
+    nameThis: '为这台机器命名',
+    namePlaceholder: '你能认出的名称',
+    unpairHint: '此操作无法撤销。对方设备仍保留自己的记录。',
+    confirm: '确认解除',
+  },
+
+  timeline: {
+    hint: '按小时的活动量。点击某小时可查看该时段。',
+    inRange: '此时段内',
+    now: '现在',
+  },
+
+  chatter: {
+    feed: '实时',
+    top: '热门域名',
+    new: '首次出现',
+    lookups: '次查询',
+    domains: '个域名',
+    newDomains: '新增',
+    flagged: '已标记',
+    flaggedOnly: '仅已标记',
+    noLookups: '此时段内没有记录到 DNS 查询。',
+    noLookupsHint:
+      '通常是因为加密 DNS。浏览器和 Windows 越来越多地通过 HTTPS 发送查询，不拦截 TLS 就无法读取，而 LAN Sheriff 从不这样做。VPN 或独立的解析器同样会让查询不可见。',
+    noNew: '此时段内没有域名首次出现。',
+    searchThis: '按此域名筛选',
+    newTag: '新',
+    needsPatrol: 'DNS 查询仅在巡逻模式下可见，或当这台设备本身就是解析器时。',
+    listsLoaded: '已标记 {count} 个域名',
+  },
+
+  roster: {
+    title: '名册',
+    subtitle: '在此网络上发现的所有设备',
+    empty: '尚未发现任何设备。',
+    emptyHint: '设备在网络上通信时会被发现，通常需要一到两分钟。',
+    peerHead: '由对等实例报告',
+    peerOrgs: '{n} 个组织',
+    peerOrgsPlural: '{n} 个组织',
+    peerNote:
+      '已配对机器上的 {n} 台设备。对等实例只发送名称以及它与谁通信，从不发送硬件地址、厂商或设备所宣告的服务，因此无法在此为它们授职、监视或扫描。',
+    searchPlaceholder: '搜索设备',
+    online: '在线',
+    offline: '离线',
+    thisMachine: '本机',
+    pairedPeer: '已配对',
+    pairedElsewhere: '另有 {count} 台在别处配对',
+    gateway: '网关',
+    devices: '台设备',
+    showOffline: '显示离线设备',
+    colDevice: '设备',
+    colType: '类型',
+    colAddress: '地址',
+    colVendor: '厂商',
+    colLastSeen: '最后出现',
+    hardwareAddress: '硬件地址',
+    randomized: '随机',
+    randomizedHelp: '此设备使用私有地址，在不同网络之间会变化。在本网络中保持不变。',
+    hostname: '主机名',
+    model: '型号',
+    services: '提供',
+    addresses: '地址',
+    firstSeen: '首次出现',
+    noServices: '未公布任何服务',
+    identifiedBy: '根据{evidence}判定为{type}',
+    close: '关闭',
+  },
+
+  deviceType: {
+    'this-machine': '本机',
+    router: '路由器',
+    printer: '打印机',
+    tv: '电视',
+    speaker: '音箱',
+    phone: '手机',
+    tablet: '平板电脑',
+    computer: '计算机',
+    'single-board-computer': '单板计算机',
+    nas: '网络存储',
+    camera: '摄像头',
+    'games-console': '游戏主机',
+    'smart-home': '智能家居设备',
+    unknown: '无法识别',
+  },
+
+  evidence: {
+    service: '其公布的服务',
+    model: '其型号名称',
+    vendor: '其制造商',
+    gateway: '它是本网络的网关',
+    self: '它就是本机',
+  },
+
+  health: {
+    title: '观测数据未被保存',
+    body: 'LAN Sheriff 能看到网络活动但无法保存，因此此视图并非最新。错误：{error}',
+    failures: '连续 {count} 次写入失败',
+  },
+
+  deputize: {
+    deputize: '设为副手',
+    watch: '加入监视',
+    clear: '清除',
+    deputized: '副手',
+    watched: '监视中',
+    unknown: '未判定',
+    trustHelp: '副手设备会降低可疑度，监视中的设备会提高可疑度。',
+    label: '名称',
+    labelPlaceholder: '你对这台设备的称呼',
+    notes: '备注',
+    notesPlaceholder: '任何值得记住的事',
+    save: '保存',
+    saved: '已保存',
+    saveFailed: '保存失败',
+    type: '类型',
+    typeAuto: '自动判断',
+    typeHelp: '如果判断有误，可自行设置。',
+  },
+
+  freshness: {
+    updatedJustNow: '刚刚更新',
+    updatedAgo: '{ago}前更新',
+    refreshNow: '立即刷新',
+    refreshing: '正在刷新…',
+    nextIn: '{seconds} 秒后再次检查',
+  },
+
+  precinct: {
+    thisNetwork: '本网络中',
+    destinations: '目标',
+    connections: '{count} 个连接',
+    truncated: '{count} 个较少活动的目标未显示',
+    empty: '暂无可绘制的内容。',
+    emptyHint: '当本网络中的设备建立连接后，地图会逐步显示。',
+    firstContact: '在此期间之前未出现过',
+  },
+
+  help: {
+    title: '帮助',
+    subtitle: 'LAN Sheriff 的工作方式，以及它能看到和看不到什么',
+    startTitle: '从这里开始',
+    startMode: '此安装当前运行在{mode}。',
+    startSees: '从这里能看到什么',
+    startDo: '要看到更多',
+    seeApps: '本机上哪个应用打开了每个连接',
+    seeDevices: '网络上的其他设备',
+    seeDNS: '未加密时的 DNS 查询',
+    seeVolumes: '每个连接传输了多少数据',
+    seeInventory: '已发现设备的列表',
+    whatTitle: '这是什么',
+    whatBody: 'LAN Sheriff 监视离开你网络的流量，并告诉你它去了哪里。它完全在本机运行。不上传任何内容，无需账号，除更新位置和信誉数据外无需联网。',
+    modesTitle: '两种模式',
+    deputyBody: '副手模式读取操作系统本就维护的连接表。它不需要特殊权限，并能指出每个连接背后的应用程序，但只能看到本机。',
+    patrolBody: '巡逻模式从网络本身抓取数据包。如果有观测点（在路由器上或镜像端口上）它能看到网络上的所有设备及其 DNS 查询；否则交换机只会显示这台设备的流量。它无法指出是哪个应用程序造成的，并且抓包需要授权。',
+    patrolHow: '两者互为补充，而非递进关系。正式发布的程序已包含抓包功能；在 macOS 和 Linux 上，以提升的权限启动即可使用巡逻模式。',
+    viewsTitle: '各个视图',
+    watchtowerBody: '监视塔把每一条外发连接标在世界地图上，让你一眼看清流量去向。',
+    chatterBody: '无线电通话列出你的网络查询过的域名。它需要巡逻模式，或本机就是网络的 DNS 解析器。',
+    precinctBody: '辖区地图把你的网络画成示意图：你的设备在中间，它们联系的组织在外围。',
+    rosterBody: '名册列出在你网络上发现的每台设备，包括厂商、推测的类型以及它公布的服务。',
+    wantedBody: '通缉名单标出值得再看一眼的行为，并用一句可核实的话说明每一条。',
+    trustTitle: '设为副手与监视',
+    trustBody: '把信任的设备设为副手，日后会降低对它的可疑度。把拿不准的设备加入监视，则会以更严格的标准衡量。两者都不会阻断任何流量：LAN Sheriff 只观察，不干预。',
+    privacyTitle: '隐私',
+    privacyBody: '一切都留在本机。LAN Sheriff 没有账号系统，不发送遥测数据，也绝不上传你的流量。确实有少数几项会连上互联网，它们全部列在这里。',
+    privacyOutboundTitle: '离开这台机器的全部内容',
+    privacyOutboundBody: '这就是完整清单。位置和域名数据库会作为普通文件在后台下载，这只让那些提供方知道有人下载了一个文件，而不会透露你的网络的任何情况。你的网络自身的公网地址会被查询一次，好让地图有一个起点。除非你主动开启，否则通知和对等共享什么都不会发送。没有账号，没有遥测，没有使用分析，也没有更新检查。',
+    privacyOutboundRegistration: '其中有一项不一样，也正是值得了解的一项。当你打开某个通信对端并询问它归谁所有时，这一个地址会被发送给互联网的地址注册机构，再发送给管辖它的区域注册机构，因此这两方会知道你在查看哪个对端。它只在你主动询问时发生，每个对端一次，绝不会自行发生。',
+    privacyOutboundOffline: '以离线方式启动 LAN Sheriff 会让这一切都不再发生：不下载，不查询地址，也不查询注册信息。',
+    privacyPeeringTitle: '启用调度台后会有什么变化',
+    privacyPeeringBody: '设备间共享是唯一会让数据离开这台设备的功能，因此在您启用之前它不会运行。启用后，它只向您通过手动传递配对码明确配对过的实例发送按小时汇总的数据，设备、组织、国家、应用程序和计数。它绝不发送地址、主机名、您查询过的域名，也不发送任何关于单条连接的信息。中间没有服务器：两台设备在您自己的网络上直接通信，任何内容都不会到达第三方。解除配对会删除该对端发来的全部内容。',
+    dataTitle: '你的数据在哪里',
+    dataBody: '观测结果保存在本机的单个数据库文件中，大小有上限，写满时会自动清理。你可以在设置中更改保存时长，或清除全部数据。',
+    creditsTitle: '数据从哪里来',
+    creditsBody: 'LAN Sheriff 之所以有用，是因为其他人公开了优质数据。其中一部分随程序一起分发，其余的在后台下载一次。这些下载只会让提供方知道有人取走了一个文件，此外别无其他，之后的每一次查询都在本机完成。',
+    creditsOUI: '硬件地址前缀的公开注册库',
+    sweepTitle: '发现沉默的设备',
+    sweepBody: '为了发现从不与本机通信的设备，LAN Sheriff 每小时数次向你自己网络中的每个地址发送一个极小的数据包。操作系统借此获知它们的硬件地址。不会有任何内容发送到你的网络之外，可以关闭它：',
+    findingsTitle: '如何看懂通缉名单',
+    findingsBody: '一条发现是 LAN Sheriff 注意到、建议你查看的情况。它不是指控，也从不阻断任何通信。每条都用一句可核实的话说明：如果你认得这台设备和这个行为，那就是答案。',
+    findingsScore: '进度条显示该设备所有未处理发现的合计评分。同一设备的多条小发现比单条较大的更重要，因为那通常更能说明问题。具体数字没有意义，行与行之间的比较才有意义。',
+    findingsActions: '“关闭”用于处理你已查看的发现。“信任”还会把该设备设为副手，今后对它的可疑度会降低。',
+    rulesTitle: '各条规则在找什么',
+    ruleNewDevice: '你的网络上出现了此前从未见过的设备。安装后的头十分钟内不提示，因为那时一切都是新的。',
+    ruleFirstContact: '设备连接了它从未联系过的组织。评分取决于这对该设备而言有多反常：笔记本电脑每小时都会接触新组织，因此被忽略；而只认识三个组织的设备联系第四个，就值得一看。',
+    ruleBeaconing: '设备以非常规律的间隔连接同一目标。远程控制类恶意软件就是这样回连的，但许多普通软件也如此，所以这条发现会给出间隔和次数，由你来判断。',
+    ruleRareDestination: '设备连接了本网络几乎从不使用的互联网区域，判断依据是你自己的历史记录。这里没有可疑国家清单，比较的对象永远只是“本网络的常态”。',
+    ruleDga: '设备查询了多个不存在的机器生成域名。无法写死控制服务器的恶意软件会不断猜测域名，直到有一个响应。能够解析成功的名称一律忽略，无论看起来多奇怪，内容分发网络本来就在大量使用随机样式的主机名。',
+    rulePortScan: '设备对一台机器探测大量端口，或对大量机器探测同一端口，且多数尝试被拒绝。会接触很多端口但能成功连接的软件是在正常工作而非扫描，将被忽略，LAN Sheriff 自身的端口检查同样被忽略。',
+    rulePlaintext: '设备通过互联网以未加密方式发送凭据或私密数据，Telnet、FTP、未加密邮件或数据库协议。明文 HTTP 有意不报告：它在任何健康网络中都持续存在，而对于他人的跳转，用户通常无能为力。',
+    ruleVolume: '设备的活动远超平常，比较对象是它自己的历史记录，而不是固定阈值。以连接数计量，因为副手模式看不到字节数。需要先积累几天历史：否则夜间安静、清晨繁忙的笔记本电脑每天都会被报告。',
+    ruleThreatList: '设备查询了一个出现在公开恶意主机名单中的域名。这是唯一不需要历史数据的规则：其他规则都必须先了解您的网络何为正常，而别人早已查实的恶意主机，并不会因为在这里罕见就更可疑。但它需要看到 DNS 查询，这意味着巡逻模式；在副手模式下无内容可读，因此该规则保持沉默。广告与追踪域名由同一批名单标记，但此处刻意不予报告：它们太过普通且持续出现，会把真正重要的发现淹没。',
+    rulesQuiet: '判断“本网络常态”的规则在第一天保持沉默，有些还需要更长的历史。健康网络上通缉名单为空是预期结果。',
+    emptyTitle: '为什么某个页面是空的',
+    emptyBody: '无线电通话需要巡逻模式，或本机就是网络的 DNS 解析器。在没有任何情况达到规则阈值之前，通缉名单是空的，这是正常状态。名册和辖区地图会在最初几分钟内逐步填充。',
+    patrolTitle: '启用巡逻模式',
+    patrolMac: '在 macOS 上，请以管理员权限启动 LAN Sheriff。抓包需要访问 BPF 设备，普通用户没有该权限。',
+    patrolLinux: '在 Linux 上，可以用管理员权限启动，或一次性给可执行文件授予抓包能力，之后正常启动即可。',
+    patrolWindows: '在 Windows 上，请安装 Npcap 并以管理员身份运行 LAN Sheriff。没有 Npcap 时应用仍可运行，处于副手模式。',
+    optionsTitle:
+      '值得了解的选项',
+    optionsIntro:
+      '不加任何选项也能完整运行。下面这些是大家真正会用到的；其余的由程序自己列出：',
+    optListen:
+      '在哪里监听。默认只监听本机。',
+    optPassword:
+      '即使在本机也要求密码。其他任何绑定本来就会要求。',
+    optDataDir:
+      '数据库放在哪里。想把它放到有备份的位置，或者读取一份副本时很有用。',
+    optOffline:
+      '只显示已有的数据库，不做任何观察：不抓包、不发现、不查询。这是事后翻阅记录用的模式。',
+    optCityDB:
+      '下载城市级精度的位置数据库。下载 62 MB，占用磁盘 125 MB，因此并非默认开启。',
+    optInterface:
+      '巡逻模式在哪块网卡上抓包。不指定时自动选择，设置页会列出它找到的网卡。',
+    optPromiscuous:
+      '不再向网卡索取并非发给本机的流量。某些网卡和虚拟机在混杂模式下表现不佳。',
+    optProxy:
+      '在本机绑定时接受这个 Host 头，供前面终结 TLS 的反向代理使用。可重复指定。',
+    notifyTitle:
+      '让它告诉您，而不是您盯着它',
+    notifyBody:
+      '可以把发现送到别处，而不是等人来注意。四个都默认关闭，除非您指定其一；每一个也只发送发现本身：注意到了什么、哪台设备、以及分值。没有流量，没有地址，除此之外没有任何东西离开本机。',
+    notifyScore:
+      '默认门槛是 0.6 分。调低听到更多，调高听到更少。',
+    thisTitle:
+      '本次安装',
+    thisPlatform:
+      '平台',
+    thisBuild:
+      '构建',
+    thisVersion:
+      '版本',
+    thisDatabase:
+      '数据库',
+    buildStandardIs:
+      '标准版，已编译进抓包功能',
+    buildPortableIs:
+      '便携版，因此只有副手模式',
+    buildPortableOnlyIs:
+      '便携版。本平台没有发布带抓包的构建，所以这里副手模式就是全部功能。',
+    buildFromSource:
+      '由源码构建',
+    installTitle:
+      '安装到另一台机器',
+    installIntro:
+      '同一个程序可以在下列所有平台上运行。下面每条命令都会安装标准版、校验已公布的校验和，并为所在机器挑选正确的文件，因此它们都用不到再下面那张表。',
+    installLinuxPkg:
+      'Debian、Ubuntu、Fedora、RHEL 和 Alpine。请先从发布页取到对应您架构的软件包。相比压缩包更推荐它们：其中带有一个服务，可在不以 root 运行整个程序的情况下授予抓包权限。',
+    installOther:
+      '其他任何情况，包括树莓派。安装脚本在安装任何东西之前都会校验已公布的校验和，而且没有跳过它的选项。在把任何脚本接进终端执行之前，这一点值得先知道。',
+    installDocker:
+      'Docker。这里的主机网络模式不是可选项：处在默认网桥上的容器看到的是 Docker 自己的网络，于是仪表板起来了，却找不到任何属于您的东西。',
+    installByHandTitle:
+      '手动下载',
+    installByHand:
+      '一次发布带有二十多个文件，而且有些平台会有同一程序的两种构建。这是阅读该表的唯一理由：',
+    buildStandard:
+      '标准版',
+    buildPortable:
+      '便携版',
+    buildNeeds:
+      '需要',
+    buildBuiltFor:
+      '构建平台',
+    buildStandardNeeds:
+      'Windows 上需要 Npcap。macOS 和 Linux 上无需任何东西。',
+    buildPortableNeeds:
+      '完全不需要',
+    buildYes:
+      '有',
+    buildNoDeputy:
+      '没有，仅副手模式',
+    installPick:
+      '除非您的平台只出现在便携版这一列，否则请取标准版。便携版是为带抓包的构建到不了的地方准备的：FreeBSD，也就是 pfSense 和 OPNsense；32 位 ARM，也就是较老的树莓派；以及 ARM 版 Windows。选错了可以补救，也很明显，因为本页会写明您实际正在运行的是哪一种构建。',
+    pairingTitle:
+      '配对两台机器',
+    pairingIntro:
+      '对等共享在您开启之前一直关闭，而且仅仅开启并不会共享任何内容。配对是一次性的代码交换，由您亲自把代码从一台机器带到另一台，正因如此中间不需要任何服务器。两台机器的角色不同：一台显示代码，另一台输入代码。',
+    pairingStep1:
+      '在两台机器上都进入调度台并开启对等共享。此时两边都还没有共享任何东西。',
+    pairingStep2:
+      '在其中一台上选择显示代码。它会给出一个代码，以及对方应当用来连接它的地址。请让该窗口保持打开：代码有效期十五分钟，过期后有按钮可以再取一个。',
+    pairingStep3:
+      '在另一台上选择输入代码，然后填入第一台的地址和代码。发起连接的是这一台，所以需要能连通对方的也是这一台。',
+    pairingReach:
+      '配对只连接两台机器，到此为止。若本机分别与另外两台配对，那两台之间仍看不见彼此：对等实例只报告自己观察到的内容，任何数据都不会经由第三台中转。因此可以把所有机器都配对到同一台上，用最少的步骤让那一台看到全部；若每台都必须看到其余各台，就需要两两配对。',
+    pairingTrouble:
+      '如果提示无法连接该地址，请先检查地址再检查代码。配对的机器通过端口 2912 通信，而不是仪表板端口；只在本机监听的实例无法从外部访问。代码只能用一次，再试一次需要新的代码。',
+    pairingTailscale:
+      '如果完全没有响应，请检查显示配对码的那台机器上是否在运行 Tailscale。它的“阻止传入连接”设置会丢弃所有网络接口上的入站流量，包括你自己的网络，而出站流量照常工作，因此这台机器看上去在线，却仍然拒绝配对。',
+    updateTitle:
+      '更新到较新的版本',
+    updateBody:
+      '更新就是一个文件。停止 LAN Sheriff，把新的可执行文件放到原来的位置，然后重新启动。历史记录、密码和配对关系都保存在数据目录而不是可执行文件里，所以替换它不会动到这些内容。',
+    updateMac:
+      '在 macOS 上，请先删除旧文件，再把新文件复制到该位置。macOS 会为该文件记住一份签名，直接覆盖会让这份记录描述着已经不存在的内容，于是新副本在启动的一瞬间就被终止，且没有任何提示。它看起来完全像是下载损坏，但并不是。',
+    updateLinux:
+      '在 Linux 上，替换文件会清除让巡逻模式得以抓包的权限，因为该权限属于文件本身而不属于路径名。每次更新后重新授予，或者以带 AmbientCapabilities 的 systemd 服务方式运行 LAN Sheriff：这种方式在启动时授予权限而不是把它存在文件上，因此更新后依然有效。',
+    updateWindows:
+      '在 Windows 上请先停止程序：正在运行的程序无法被替换。Npcap 是单独安装的，更新不会影响它。',
+    updateCheck:
+      '然后确认实际运行的是什么。构建号每次改动都会递增，因此这是分辨“更新成功”与“复制其实悄悄没生效”的最快办法。',
+    remoteTitle:
+      '从另一台机器打开仪表板',
+    remoteBody:
+      'LAN Sheriff 默认只在本机监听，所以服务器或树莓派上的全新安装会拒绝您笔记本的连接。这是安全的默认设置，而不是故障。要从别处访问，请让它绑定到网络中可见的地址启动：',
+    remotePassword:
+      '能连到该端口的人就能读到您的网络做过什么，因此请同时设置密码。凡是超出本机的绑定，LAN Sheriff 都会坚持要求密码，您打开的第一个页面就会请您设置。',
+    cliTitle:
+      '不用仪表板',
+    cliBody:
+      '仪表板是在您的浏览器里，用本机已有的数据绘制实时表格和地图，而不是一页一页地发送页面，因此需要 JavaScript。如果您不想用浏览器，或者一直关闭脚本，同样的数据可以从终端获取。',
+    cliStatus:
+      '本机在共享什么，与谁共享。不需要密码、不需要权限，也不需要正在运行的服务器，所以即使别的都不响应，它也能回答。',
+    cliExport:
+      '所有见过的目的地，以电子表格形式。脚本请用 format=json，单条连接请用 view=flows。同样这两个文件也在每个视图的工具栏上。',
+    cliNoJS:
+      '关闭了 JavaScript 的浏览器不会只看到一片空白。它会得到一个页面，说明仪表板为何需要它、加载什么和不加载什么，以及这些相同的命令，并且是您的语言。',
+  },
+
+  widgets: {
+    nowTitle: '此刻',
+    upFor: '已运行 {time}',
+    tallyTitle: '过去 24 小时',
+    newOrgs: '{count} 个新目标',
+    newDevices: '{count} 台新设备',
+    nothingNew: '没有新增',
+    loudest: '最活跃',
+    quietest: '{hour} 前后最安静',
+    devicesOnline: '{known} 台中 {online} 台在线',
+    needHistory: '历史数据还不够',
+    connections: '{count} 个连接',
+  },
+
+  wanted: {
+    wantedTitle: '头号通缉',
+    allQuiet: '一切正常',
+    allQuietSub: '没有需要再看一眼的情况。',
+    andMore: '还有 {count} 个',
+    wantedCount: '{count} 个被通缉',
+  },
+
+  rule: {
+    new_device: '新设备',
+  },
+
+  scan: {
+    checkPorts: '检查端口',
+    checkFailed: '无法检查端口',
+    checking: '正在检查…',
+    checkedResult: '{checked} 个端口中有 {open} 个响应',
+    checkHelp: '向该设备的 {count} 个常用端口建立连接后立即关闭。不发送任何数据。',
+    sourceScan: '询问时有响应',
+    sourceObserved: '在流量中发现',
+    sourceAdvertised: '已公布',
+  },
+
+  wantedList: {
+    peerNote:
+      '这些发现只针对本机自己观察到的内容。对等实例发送的是按小时的汇总，而不是这些规则所需的细节，因此它的设备不会在这里被评判。',
+    title: '通缉名单',
+    subtitle: '值得再看一眼的行为',
+    empty: '没有通缉',
+    emptySub: '本网络中没有需要标记的异常行为。',
+    allClear: '一切正常',
+    clear: '关闭',
+    trust: '信任',
+    cleared: '已关闭',
+    why: '原因',
+    subjectDevice: '设备',
+    openFindings: '{count} 项待处理',
+    seen: '最后出现',
+    firstSeen: '首次出现',
+    e_new_device: '首次出现在本网络中。',
+    e_first_contact: '首次连接 {org}。该设备在 {observed_days} 天内连接过 {known_orgs} 个组织。',
+    e_beaconing: '每 {interval} 连接一次 {org}，共 {hits} 次，规律度 {regularity}%。',
+    e_rare_destination: '连接了 {country}，其占本网络流量的 {share_pct}%。',
+    e_dga_domain: '对 {names} 个不存在的机器生成域名发起了查询，例如 {example}。',
+    e_port_scan_v: '探测了 {target} 的 {ports} 个端口，其中 {connected} 个有响应。',
+    e_port_scan_h: '在 {hosts} 台设备上探测了端口 {port}，其中 {connected} 台有响应。',
+    e_plaintext: '以未加密方式向 {org} 发送了 {hits} 次 {protocol} 通信。',
+    e_volume_anomaly: '一小时内建立了 {connections} 个连接，约为平常 {typical} 个的 {times} 倍。',
+    e_threat_list_r: '已连接 {domain}，该名称出现在公开的恶意软件名单中，共 {hits} 次。',
+    e_threat_list_u: '曾尝试连接 {domain}，该名称出现在公开的恶意软件名单中，共 {hits} 次。该名称未能解析。',
+  },
+
+  ruleName: {
+    new_device: '新设备',
+    first_contact: '首次连接',
+    beaconing: '规律回连',
+    rare_destination: '罕见目标',
+    dga_domain: '猜测的域名',
+    port_scan: '端口扫描',
+    plaintext: '未加密的通信',
+    volume_anomaly: '异常的通信量',
+    threat_list: '已知的恶意主机',
+  },
+
+  bolo: {
+    title: '有值得关注的情况',
+    view: '查看',
+    dismiss: '忽略',
+    more: '还有 {count} 条',
+  },
+
+  msg: {
+    deputy_only:
+      '副手模式只显示本机。巡逻模式会加上网络上的其他所有设备、DNS 数据流和完整的网络地图。它需要抓包权限，在 Windows 上还需要 Npcap；帮助页会说明您的情况。',
+    deputy_unsupported: '此平台尚不支持副警长模式，因此无法读取这台设备的连接。',
+    patrol_no_privilege:
+      '巡逻模式无法打开捕获接口，因此只能看到本机。在 Windows 上请从 https://npcap.com 安装 Npcap 并以管理员身份运行；其他系统请授予抓包权限。',
+    patrol_no_privilege_linux:
+      '巡逻模式无法打开抓包接口，因此只能看到本机。请用下面的命令授予抓包权限，或以 root 运行。',
+    patrol_no_privilege_macos:
+      '巡逻模式无法打开抓包接口，因此只能看到本机。抓包需要访问 BPF 设备，通常意味着用 sudo 启动。',
+    patrol_no_privilege_windows:
+      '巡逻模式无法打开抓包接口，因此只能看到本机。请从 https://npcap.com 安装 Npcap，然后以管理员身份运行 LAN Sheriff。',
+    patrol_needs_vantage: '正在监视这台设备的流量。网络上的其他设备只有在这台设备能看到它们的流量时才会出现，通常需要把它接到路由器上，或接到设置为复制流量的交换机上。多数家庭网络并非如此，这很正常。',
+    patrol_not_built: '此版本在编译时未包含抓包功能，因此只能看到这台设备。官方发布版本已包含；若您自行从源码编译，请启用抓包后重新编译。',
+    patrol_portable:
+      '这是便携版，以放弃数据包捕获换取随处可运行，只能看到本机。适用于您平台的标准下载包含捕获功能: https://github.com/291-Group/LAN-Sheriff/releases',
+    patrol_portable_only:
+      '这是便携版。本平台没有发布带数据包捕获的版本，因此此处无法使用 巡逻模式，只能看到本机。',
+    offline_record: '当前没有抓包。这是已保存的记录，查看期间不会发生变化。',
+    no_byte_counts: '副警长模式下无法获取流量大小：操作系统只报告连接，不报告数量。巡逻模式会直接测量。',
+    dns_needs_patrol:
+      'DNS 查询只在巡逻模式下可见，或当本机自身就是网络的解析器时。巡逻模式需要抓包权限，在 Windows 上还需要 Npcap；帮助页会说明您的情况。',
+    auth_required: '请登录。',
+    setup_required: '请先创建密码。',
+    password_already_set: '密码已设置。',
+    password_too_short: '密码太短。',
+    password_too_long: '密码太长。',
+    wrong_password: '密码错误。',
+    locked_out: '失败次数过多。请等待几分钟后重试。',
+    bad_request: '无法读取该请求。',
+    retention_invalid: '保留设置至少需要 1 小时明细、1 天历史和 16 MB 存储。',
+    unknown_view: '未知视图。',
+    not_found: '未找到。',
+    not_an_address: '这不是一个地址。',
+    rdap_disabled: '注册信息查询未启用。',
+    internal: '出现了问题。',
+    whatThisMeans: '此模式能看到什么',
+  },
+
+  banner: {
+    deputyHint:
+      '副警长模式仅显示这台设备。巡逻模式会加入网络中的其他所有设备、DNS 记录以及完整的网络地图。',
+  },
+}

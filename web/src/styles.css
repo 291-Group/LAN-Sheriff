@@ -1,0 +1,3030 @@
+/* Light glass by default: translucent panels over a soft gradient, in the
+   manner of a modern Apple surface. Dark stays available via the toggle, which
+   sets data-theme="dark" on the root. Both themes drive the canvas map too, 
+   map.ts reads these variables so the map never disagrees with its chrome. */
+
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --bg-a: #eef2f8;
+  --bg-b: #e4ecf6;
+  --bg-c: #f6f1ec;
+  --glass: rgba(255, 255, 255, 0.62);
+  --glass-strong: rgba(255, 255, 255, 0.8);
+  --glass-hover: rgba(255, 255, 255, 0.92);
+  /* Opaque, and deliberately not glass. A floating menu is drawn over text the
+     reader is meant to stop reading, and backdrop-filter cannot be relied on to
+     hide it: an element with backdrop-filter is a backdrop root, so a menu
+     nested inside one blurs only what is behind that ancestor, never the
+     ancestor's own content. On the sign-in card that meant the heading and the
+     footer read straight through the language list. Solid, so the question
+     cannot arise. */
+  --menu: #ffffff;
+  --stroke: rgba(255, 255, 255, 0.85);
+  --hairline: rgba(16, 24, 40, 0.09);
+  --shadow: 0 8px 32px rgba(16, 24, 40, 0.09);
+  --shadow-sm: 0 2px 10px rgba(16, 24, 40, 0.06);
+  --blur: saturate(180%) blur(22px);
+
+  /* Type */
+  --text: #16202e;
+  --text-dim: #56637a;
+  --text-faint: #8592a6;
+
+  /* Accents */
+  --star: #d9a227;
+  --star-soft: rgba(217, 162, 39, 0.16);
+  --calm: #2f7fd4;
+  --warm: #e0842c;
+  --hot: #d9483f;
+  --ok: #2c9e6b;
+
+  /* Map */
+  --map-ocean: rgba(255, 255, 255, 0.42);
+  --map-land: #d6dfeb;
+  --map-edge: #c2cedd;
+  --map-tooltip-bg: rgba(255, 255, 255, 0.94);
+  --map-tooltip-edge: rgba(16, 24, 40, 0.12);
+  /* **A closed connection has to be visible on the land it crosses.**
+     At #adb9c9 the idle arc measured 1.48:1 against --map-land, which is not a
+     faint line, it is very nearly no line: on a light grey map most of the
+     history simply was not there, and a tester reported the arcs as unreadable.
+     Darkened to 2.71:1, still clearly quieter than an active arc, and now
+     actually drawn. */
+  --arc-idle: #78879d;
+  /* Peer-reported destinations. Distinct from --arc-idle because a closed
+     connection of your own and a peer's report are different facts, and the
+     Everything layer draws both at once. */
+  --arc-peer: #8b6fc4;
+
+  /* Badge */
+  --badge-hi: #f2c357;
+  --badge-lo: #d9a227;
+  --badge-edge: #b07f16;
+  --badge-line: rgba(120, 82, 8, 0.5);
+  --badge-node: #7d5806;
+  --badge-hub: #fff3d4;
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Inter, system-ui, sans-serif;
+  --radius: 14px;
+  --radius-sm: 9px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+
+  --bg-a: #0a0f17;
+  --bg-b: #0e141f;
+  --bg-c: #141019;
+  --glass: rgba(26, 34, 47, 0.6);
+  --glass-strong: rgba(26, 34, 47, 0.82);
+  --glass-hover: rgba(38, 48, 65, 0.9);
+  --menu: #212b3a;
+  --stroke: rgba(255, 255, 255, 0.08);
+  --hairline: rgba(255, 255, 255, 0.09);
+  --shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+  --shadow-sm: 0 2px 10px rgba(0, 0, 0, 0.3);
+
+  --text: #e4ebf5;
+  --text-dim: #97a5ba;
+  --text-faint: #6c7b91;
+
+  --star: #e8b64c;
+  --star-soft: rgba(232, 182, 76, 0.18);
+  --calm: #4a9eda;
+  --warm: #d98a3a;
+  --hot: #e05c5c;
+  --ok: #4cc38a;
+
+  --map-ocean: rgba(10, 15, 23, 0.35);
+  --map-land: #1b2432;
+  --map-edge: #26313f;
+  --map-tooltip-bg: rgba(16, 22, 31, 0.94);
+  --map-tooltip-edge: rgba(255, 255, 255, 0.16);
+  --arc-idle: #63738f;   /* 3.26:1 on the dark land; see the note above */
+  --arc-peer: #9b82d4;
+
+  --badge-hub: #2a2114;
+  --badge-line: rgba(255, 226, 160, 0.45);
+  --badge-node: #f4d489;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #app { height: 100%; margin: 0; }
+
+body {
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+  /* Three soft pools of colour, so the translucency has something to catch. */
+  background:
+    radial-gradient(1100px 700px at 12% -8%, var(--bg-c) 0%, transparent 58%),
+    radial-gradient(1000px 800px at 88% 8%, var(--bg-b) 0%, transparent 62%),
+    linear-gradient(168deg, var(--bg-a) 0%, var(--bg-b) 100%);
+  background-attachment: fixed;
+}
+
+.badge { display: block; flex: none; }
+
+/* ---------- shell ---------- */
+
+.shell {
+  display: grid;
+  /* 208px, not a round number picked by eye. The binding constraint is the
+     longest nav entry across all twelve languages, which is Russian
+     ("Карта исходящего трафика", 145px) inside a 24px item padding and 16px of
+     nav padding, 197px in total. This leaves 11px of slack. English needs only
+     168px, so sizing to English would wrap the sidebar for other readers.
+     The brand pane shares this column and needs just 151px. */
+  grid-template-columns: 208px 1fr;
+  grid-template-rows: 56px 1fr;
+  grid-template-areas: "brand status" "nav main";
+  height: 100%;
+  gap: 10px;
+  padding: 10px;
+}
+
+.panel {
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+}
+
+/* The brand is a link to the root, but it must not read as body-text link:
+   no underline, in any state, on itself or on anything inside it. */
+.brand,
+.brand:hover,
+.brand:focus,
+.brand:visited {
+  grid-area: brand;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 16px;
+  color: inherit;
+  text-decoration: none;
+}
+.brand * { text-decoration: none; }
+.brand:hover .brand-name { color: var(--star); }
+.brand:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px var(--star-soft);
+  border-radius: var(--radius);
+}
+.brand-name { font-weight: 620; letter-spacing: -0.01em; line-height: 1.15; }
+.brand-name small {
+  display: block;
+  font-weight: 500;
+  font-size: 9.5px;
+  color: var(--text-faint);
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+  /* Nudged up a pixel to sit tighter under the product name. The uppercase
+     letterforms have no descenders, so their optical gap reads larger than the
+     metric one. */
+  margin-top: 0;
+}
+
+.statusbar {
+  grid-area: status;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  /* Deliberately NOT overflow:hidden. The language menu is positioned inside
+     this bar, and an overflow clip cannot be escaped by any z-index, the menu
+     would be cut off at the bar's edge. Truncation is handled where it belongs,
+     on .ticker-body, which ellipsises on its own. */
+  position: relative;
+  z-index: 30;
+  /* A flex item will not shrink below its content's minimum unless told it may.
+     Without this the bar forces the whole shell wider than the viewport and the
+     *page* scrolls sideways, which is how a too-narrow window turned into a
+     horizontally scrolling app rather than a tighter one. */
+  min-width: 0;
+}
+
+.mode-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 11px;
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  background: var(--glass-strong);
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-faint); flex: none; }
+.dot.live { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 22%, transparent); animation: breathe 2.4s ease-in-out infinite; }
+.dot.down { background: var(--hot); }
+@keyframes breathe { 0%, 100% { opacity: 1 } 50% { opacity: 0.4 } }
+
+.stat { display: flex; align-items: baseline; gap: 6px; white-space: nowrap; }
+.stat b { font-weight: 620; font-size: 15px; letter-spacing: -0.02em; }
+.stat span { color: var(--text-faint); font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.07em; font-weight: 550; }
+
+.ticker {
+  margin-left: auto;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  /* Only the text truncates; the sibling action buttons and their menus must
+     stay free to overflow. */
+  overflow: visible;
+}
+.ticker-label {
+  flex: none;
+  font-size: 10.5px;
+  font-weight: 550;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.ticker-body {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-dim);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.actions { flex: none; display: flex; align-items: center; gap: 8px; }
+
+/* Version, build and the project link on the sign-in screen. Quiet: it is
+   provenance, not an instruction, and the person reading it is trying to get
+   past this screen rather than admire it. */
+/* Sized to be read, not to be technically present. At 10.5px in --text-faint
+   this line was invisible enough that it was reported as missing, which for the
+   one screen that carries the build number and the only link off the product
+   makes it the same as not shipping it. */
+
+/* The link gets its own line rather than trailing the version behind a
+   separator. It is the only way off this screen, and on a narrow window the
+   one-line form wrapped mid-string, which read as two broken fragments. */
+/* Each link on its own line with air between them, rather than two lines of one
+   paragraph. They go to different places and are read as separate offers. */
+.gate-link a {
+  color: var(--text);
+  font-weight: 500;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.gate-link a:hover { color: var(--star); }
+
+/* Nothing animates while the palette is being swapped. See applyTheme in
+   app.tsx: without this, the handful of elements with a hover transition
+   crossfade through 150ms of the old theme while the rest of the page has
+   already changed, which looks like those elements lagging. */
+:root.theme-switching *,
+:root.theme-switching *::before,
+:root.theme-switching *::after {
+  transition: none !important;
+}
+
+/* The language button holds two full-width glyphs, so it cannot use the
+   14px the other icon buttons do: at that size the pair very nearly touches
+   the border of the 30px box. */
+.icon-btn.lang-btn {
+  font-size: 11.5px;
+  letter-spacing: -0.02em;
+}
+
+.icon-btn {
+  flex: none;
+  width: 30px; height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--hairline);
+  border-radius: 9px;
+  background: var(--glass-strong);
+  color: var(--text-dim);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  transition: background 0.15s, color 0.15s;
+}
+.icon-btn:hover { background: var(--glass-hover); color: var(--text); }
+
+/* ---------- nav ---------- */
+
+nav {
+  grid-area: nav;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  /* **A short window must scroll the sidebar, not clip it.**
+     A grid row is `1fr`, and a flex column inside one has an automatic minimum
+     size equal to its content, so on a laptop with a shallow window, or any
+     browser with several toolbars open, the nav grew past its row instead of
+     scrolling, and the last entries and the version line were simply
+     unreachable. `min-height: 0` is what allows the row to actually constrain
+     it; without that the overflow rule below never engages.
+     Nothing changes on a tall window: the content is shorter than the row. */
+  min-height: 0;
+  overflow-y: auto;
+  /* The footer is pinned by margin-top:auto, which stops meaning "the bottom of
+     the sidebar" once this scrolls, it becomes the bottom of the content,
+     which is correct and is what you want to scroll down to. */
+  scrollbar-width: thin;
+  /* **Reserve the scrollbar width even when there is no scrollbar.**
+
+     Without this the column is one width while the content fits and a
+     narrower one the moment it does not, and the footer pays for it: "No
+     account, no cloud, no telemetry." sits on one line until the Most Wanted
+     panel appears, at which point the scrollbar claims its space and the line
+     wraps. The text had not changed and the window had not been resized, so it
+     read as text wrapping for no reason. It was reported that way repeatedly
+     and chased as a text problem when it was a layout one.
+
+     both-edges, not plain stable: `stable` reserves the gutter on the inline
+     end only, so the column held 8px of padding on the left and 19px on the
+     right. Stable in width and permanently lopsided, which is visible without
+     being explicable. `both-edges` reserves the same on each side, and the
+     horizontal padding drops from 8px to 2px to pay for the second gutter so
+     the usable text width is unchanged and the footer still fits. */
+  scrollbar-gutter: stable both-edges;
+  padding-inline: 2px;
+}
+
+.nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  color: var(--text-dim);
+  padding: 9px 12px;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 520;
+  transition: background 0.15s, color 0.15s;
+}
+.nav-item small {
+  display: block;
+  font-size: 10.5px;
+  font-weight: 450;
+  color: var(--text-faint);
+  margin-top: 1px;
+}
+.nav-item:hover:not(:disabled) { background: var(--glass-strong); color: var(--text); }
+.nav-item.active {
+  color: var(--text);
+  background: var(--glass-hover);
+  border-color: var(--hairline);
+  box-shadow: var(--shadow-sm);
+}
+.nav-item.active small { color: var(--star); }
+.nav-item:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.nav-foot {
+  margin-top: auto;
+  /* 4px of horizontal padding, not 10.
+     Measured rather than guessed: the text box was 159px and the longest line,
+     "No account, no cloud, no telemetry.", needs about 168px at this size, so it
+     wrapped to two lines. scrollbar-gutter: stable buys a column width that no
+     longer changes when Most Wanted appears, and it buys it by keeping the
+     scrollbar's 13px reserved permanently, so the width it stabilises at is the
+     narrow one. Taking 12px back from this padding pays for that. */
+  padding: 11px 4px 6px;
+  /* Sized to hold the privacy line in two lines at the sidebar's 208px.
+     text-wrap: balance spreads it evenly rather than leaving a widow, which is
+     what pushed it to a third line after the sidebar was narrowed, and it does
+     so for whichever language is loaded, rather than being tuned to English. */
+  font-size: 9.5px;
+  text-wrap: balance;
+  color: var(--text-faint);
+  line-height: 1.55;
+  border-top: 1px solid var(--hairline);
+  /* Centred. Ragged-right in a 200px column left the pane looking like a
+     column of text that had lost its second half; these are three short
+     standalone statements rather than a paragraph, and they read as a block
+     when they share an axis. */
+  text-align: center;
+}
+
+/* The privacy line, when peer sharing is on.
+   Deliberately louder than the rest of the footer: this is the one notice whose
+   entire purpose is to be seen, and it was previously indistinguishable from
+   the reassurance it replaces. `idle` is sharing enabled with nobody paired, 
+   worth flagging, nothing has moved. `live` means summaries are going to
+   another machine, and it says so at a size somebody reads by accident. */
+.privacy-sharing {
+  /* inline, so the dot below can sit in the text flow rather than beside the
+     box. See the ::before rule for why that matters. */
+  display: inline;
+  font-size: 10px;
+  line-height: 1.5;
+  font-weight: 500;
+  /* The footer sets text-wrap: balance, which is right for the constant
+     privacy sentence and wrong here: balancing two lines leaves the first one
+     short, so "Shared only with 1" sat alone above "machine you paired" with
+     half the width unused. This line should fill each row before it wraps.
+
+     Changed to `pretty` on 2026-08-07 and changed straight back: `pretty`
+     balances short runs of text just as `balance` does, so it reproduced the
+     exact fault described above. */
+  text-wrap: wrap;
+}
+/* **In the text, not beside the box.**
+   The dot used to be absolutely positioned at left: 0 of the paragraph. That
+   looks right only while the sentence fits on one line: "Shared with 1
+   machine." kept the dot against its first word, but the longer "Peer sharing
+   is on, but nothing is paired yet." wraps, the box then spans the full width
+   of the footer, the two lines centre within it, and the dot is left stranded
+   at the far edge with a gap of dead space between it and the words.
+
+   As an inline marker it is part of the first line and centres along with it,
+   so both messages look the same whether or not they wrap. */
+.privacy-sharing::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-inline-end: 5px;
+  /* Optically centred against lowercase text rather than the full line box. */
+  vertical-align: 0.05em;
+}
+.privacy-sharing.idle { color: var(--text-dim); }
+.privacy-sharing.idle::before { background: var(--text-faint); }
+.privacy-sharing.live { color: var(--star); font-weight: 560; }
+.privacy-sharing.live::before {
+  background: var(--star);
+  box-shadow: 0 0 0 3px var(--star-soft);
+}
+
+/* The constant half, on its own line and in the footer's ordinary voice. It is
+   true in every state, so it should not borrow the emphasis of the half that
+   changes. */
+.privacy-tail {
+  display: block;
+  margin-top: 5px;
+  color: var(--text-faint);
+  font-size: 9.5px;
+  font-weight: 400;
+  /* Same reasoning as .privacy-sharing above: fill the row, do not balance. */
+  text-wrap: wrap;
+}
+
+/* ---------- main ---------- */
+
+main {
+  grid-area: main;
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.banner {
+  display: flex;
+  align-items: center;
+  /* Wraps as a whole. Without this the row could not break, so the only thing
+     able to give was the command's own inner wrap, which split the label, the
+     code and the Copy button onto separate lines and read as broken. */
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--star-soft);
+  border: 1px solid color-mix(in srgb, var(--star) 30%, transparent);
+  font-size: 12.5px;
+  color: var(--text-dim);
+}
+/* Grows to fill the row and may shrink to nothing before the controls do, so
+   the controls stay on one line with each other for as long as possible.
+   `min-width: 0` because a flex item will otherwise refuse to shrink below the
+   width of its longest unbreakable word. */
+.banner > span:first-child {
+  flex: 1 1 22rem;
+  min-width: 0;
+}
+
+.banner code {
+  font-family: var(--mono);
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline);
+  padding: 2px 7px;
+  border-radius: 5px;
+  color: var(--text);
+  font-size: 11.5px;
+}
+.banner button {
+  margin-left: auto;
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline);
+  color: var(--text-dim);
+  border-radius: 7px;
+  padding: 4px 10px;
+  cursor: pointer;
+  font-size: 11px;
+  flex: none;
+  font-family: inherit;
+}
+.banner button:hover { color: var(--text); }
+
+/* ---------- watchtower ---------- */
+
+.watchtower {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 328px;
+  gap: 10px;
+  /* No padding at all: main's flex gap provides the space above, and any
+     horizontal padding would inset the map's left edge and the side pane's
+     right edge relative to the status bar above them. */
+  min-height: 0;
+}
+.map-wrap { position: relative; min-width: 0; overflow: hidden; }
+.map-wrap canvas { display: block; width: 100%; height: 100%; border-radius: var(--radius); }
+
+.map-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  pointer-events: none;
+  text-align: center;
+  padding: 24px;
+}
+.map-empty h2 { margin: 0; font-size: 15px; font-weight: 600; color: var(--text-dim); }
+.map-empty p { margin: 0; font-size: 12.5px; color: var(--text-faint); max-width: 400px; line-height: 1.6; }
+
+.legend {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  display: flex;
+  gap: 13px;
+  padding: 6px 11px;
+  border-radius: 999px;
+  background: var(--glass-strong);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--hairline);
+  font-size: 10px;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 550;
+}
+.legend i { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; }
+
+/* inset-inline-end rather than right for consistency with the controls beside
+   it, though inside .map-wrap the two are the same thing: that container is
+   deliberately direction: ltr so the world map does not mirror in Arabic and
+   Hebrew, and the corner it pins to does not change either. */
+.attrib { position: absolute; inset-inline-end: 14px; bottom: 14px; font-size: 10px; color: var(--text-faint); }
+.attrib a { color: inherit; }
+
+/* ---------- side panel ---------- */
+
+.side { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.side-head { padding: 13px 15px 11px; border-bottom: 1px solid var(--hairline); }
+.side-head h2 {
+  margin: 0 0 3px;
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 650;
+}
+.side-head p { margin: 0; font-size: 11.5px; color: var(--text-faint); line-height: 1.45; }
+
+.ep-list { overflow-y: auto; flex: 1; min-height: 0; padding: 6px; }
+
+.ep {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  padding: 9px 11px;
+  cursor: pointer;
+  color: inherit;
+  font-family: inherit;
+  transition: background 0.13s;
+}
+.ep:hover { background: var(--glass-strong); }
+.ep.sel { background: var(--glass-hover); border-color: var(--hairline); box-shadow: var(--shadow-sm); }
+
+.ep-top { display: flex; align-items: baseline; gap: 8px; }
+.ep-org { font-size: 12.5px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; letter-spacing: -0.01em; }
+.ep-flag { margin-left: auto; font-size: 10.5px; color: var(--text-faint); font-family: var(--mono); flex: none; }
+.ep-sub { font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* A peer row names the machine, the device and the count, which does not fit on
+   one line in this column. Left to truncate it cut the connection count off the
+   end, which is the part somebody is reading the row for. */
+.ep-peer .ep-sub { white-space: normal; overflow: visible; line-height: 1.5; }
+/* Peer rows in the destinations list. Of a piece with your own destinations,
+   and clickable like them: they open a panel of what the peer actually sent.
+   The left border carries the same colour the map uses for peer arcs, so the
+   two views agree. */
+.ep-peer-head {
+  padding: 10px 14px 4px;
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+/* The peer stripe stays; the not-clickable styling does not. These rows were
+   deliberately inert, with a default cursor and no hover, because a peer sends
+   no address and there was no panel to open. There is one now, so they behave
+   like every other row in the list and inherit .ep's cursor and hover. */
+.ep-peer {
+  border-inline-start: 2px solid var(--arc-peer);
+}
+
+.ep-devices {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+/* The machine that made the connection, distinguished from the application
+   chips beside it so the two are not read as one list. */
+.chip.device {
+  background: color-mix(in srgb, var(--calm) 14%, transparent);
+  border-color: color-mix(in srgb, var(--calm) 34%, transparent);
+  color: var(--text-dim);
+}
+.chip.device.more { opacity: 0.75; }
+
+.ep-procs { margin-top: 5px; display: flex; gap: 4px; flex-wrap: wrap; }
+.chip {
+  font-size: 10px;
+  font-weight: 520;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: var(--glass-strong);
+  color: var(--text-dim);
+  border: 1px solid var(--hairline);
+}
+
+/* ---------- rap sheet ---------- */
+
+.rapsheet { border-top: 1px solid var(--hairline); padding: 13px 15px; background: var(--glass-strong); }
+.rapsheet h3 { margin: 0 0 9px; font-size: 13.5px; font-weight: 650; letter-spacing: -0.01em; }
+.rapsheet dl { margin: 0; display: grid; grid-template-columns: 88px 1fr; gap: 4px 10px; font-size: 11.5px; }
+.rapsheet dt { color: var(--text-faint); }
+.rapsheet dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+.rapsheet .close { float: right; background: none; border: 0; color: var(--text-faint); cursor: pointer; font-size: 16px; line-height: 1; }
+
+/* ---------- stub views ---------- */
+
+.stub { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 11px; text-align: center; padding: 40px; }
+.stub h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.02em; }
+.stub p { margin: 0; max-width: 460px; color: var(--text-dim); line-height: 1.6; font-size: 13px; }
+.stub .milestone {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  border: 1px solid var(--hairline);
+  background: var(--glass-strong);
+  border-radius: 999px;
+  padding: 4px 11px;
+}
+
+/* ---------- gate (setup / login) ---------- */
+
+.gate { height: 100%; display: grid; place-items: center; padding: 24px; }
+.gate-card {
+  width: min(420px, 100%);
+  padding: 30px 30px 26px;
+  background: var(--glass-strong);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke);
+  border-radius: 20px;
+  box-shadow: var(--shadow);
+}
+.gate-head { display: flex; align-items: center; gap: 11px; margin-bottom: 18px; }
+.gate-head h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.02em; }
+.gate-head small { display: block; font-size: 10px; font-weight: 550; letter-spacing: 0.11em; text-transform: uppercase; color: var(--text-faint); margin-top: 2px; }
+.gate p { margin: 0 0 18px; font-size: 13px; line-height: 1.6; color: var(--text-dim); }
+
+.field { display: block; margin-bottom: 14px; }
+.field span { display: block; font-size: 11.5px; font-weight: 560; color: var(--text-dim); margin-bottom: 6px; }
+.field input {
+  width: 100%;
+  padding: 10px 13px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text);
+  background: var(--glass-hover);
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.field input:focus {
+  border-color: color-mix(in srgb, var(--star) 55%, transparent);
+  box-shadow: 0 0 0 3.5px var(--star-soft);
+}
+
+.btn {
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--star) 88%, white), var(--star));
+  border: 1px solid color-mix(in srgb, var(--star) 70%, black);
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+}
+.btn:hover:not(:disabled) { filter: brightness(1.05); }
+.btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.gate-error {
+  margin: 0 0 14px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 12.5px;
+  color: var(--hot);
+  background: color-mix(in srgb, var(--hot) 11%, transparent);
+  border: 1px solid color-mix(in srgb, var(--hot) 28%, transparent);
+}
+/* **`.gate p.gate-note`, not `.gate-note`, and the reason is two rules up.**
+   `.gate p` sets `margin: 0 0 18px` at 0,1,1 and outranks a bare class at
+   0,1,0, so the 16px of space above this note was written, overridden in
+   silence, and never appeared: the bcrypt line sat flush against the "Create
+   password and continue" button, measured at zero pixels. The same trap
+   already caught the footer, which is documented below. Scoping it under the
+   element wins the cascade and keeps the note in one place. */
+.gate p.gate-note {
+  margin: 18px 0 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  line-height: 1.55;
+}
+
+.gate-foot {
+  margin-top: 20px;
+  padding-top: 15px;
+  border-top: 1px solid var(--hairline);
+  text-align: center;
+}
+.gate-foot .motto {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-style: italic;
+  line-height: 1.5;
+  color: var(--text-dim);
+}
+/* Sits under the version, and close to it: the two lines are one statement of
+   what this is and who made it, so the space that separates them from the links
+   below has to be visibly larger than the space between them. Set at 3px it read
+   as belonging to the links instead. */
+/* **All four margins, and scoped under .gate-foot on purpose.**
+   `.gate p` sets `margin: 0 0 18px` on every paragraph in this card, and at
+   0,1,1 it outranks a bare `.gate-version` or `.gate-link` at 0,1,0. Rules
+   written there were overridden in silence: the footer kept an 18px gap below
+   each line and none above, which is why "by 291 Group" sat hard against the
+   GitHub link no matter what the numbers above it said, and why a font-size set
+   there did nothing either. Specificity, not the values, was the bug.
+
+   The grouping the spacing is for: what this is and who made it read as one
+   statement, then a clear break, then the two links as another. */
+.gate-foot .gate-version {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--text-dim);
+}
+.gate-foot .gate-link {
+  margin: 16px 0 0;
+  font-size: 12px;
+}
+.gate-foot .gate-link + .gate-link { margin-top: 5px; }
+.gate-foot .built-by {
+  margin: 2px 0 0;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--text-faint) 34%, transparent); border-radius: 6px; border: 3px solid transparent; background-clip: content-box; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--text-faint) 55%, transparent); background-clip: content-box; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation: none !important; transition: none !important; }
+}
+
+/* ---------- toolbar ---------- */
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--glass);
+  /* **The search results depend on these two lines.**
+
+     backdrop-filter creates a stacking context, so the results dropdown's own
+     z-index only ever competed inside this toolbar. The timeline and the view
+     below are later siblings with the same automatic z-index, so they painted
+     over it in document order and the dropdown appeared cut off halfway down.
+
+     Raising the toolbar itself is the fix, because the dropdown cannot escape
+     a context it is inside. 25 sits under the status bar at 30, the modal
+     backdrop at 40 and the language menu at 60, all of which must stay above
+     it. This is the same trap as backdrop-filter becoming a containing block
+     for fixed descendants, which cost a day on the pairing dialog. */
+  position: relative;
+  z-index: 25;
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke);
+}
+
+.ranges { display: flex; gap: 2px; padding: 2px; background: var(--glass-strong); border: 1px solid var(--hairline); border-radius: 8px; }
+.range {
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.range:hover { color: var(--text); }
+.range.on { background: var(--glass-hover); color: var(--text); box-shadow: var(--shadow-sm); font-weight: 600; }
+
+.searchbox { position: relative; flex: 1 1 200px; min-width: 160px; max-width: 320px; }
+.searchbox input {
+  width: 100%;
+  padding: 6px 11px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  outline: none;
+}
+.searchbox input:focus { border-color: color-mix(in srgb, var(--star) 55%, transparent); box-shadow: 0 0 0 3px var(--star-soft); }
+
+.results {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 5px);
+  inset-inline: 0;
+  /* Wider than the box it drops from, because it carries more than the box
+     does: a kind, an organization, an address and a count. Matched to the input
+     it truncated every IPv6 address at exactly the point where two rows from
+     the same network block start to differ, so eight hits read
+     "2606:4700::6..." and the widening was the fix rather than any amount of
+     rearranging inside the old width. Capped against the viewport so a narrow
+     window shrinks it instead of pushing it off screen. */
+  min-width: min(34rem, 92vw);
+  max-height: 300px;
+  overflow-y: auto;
+  background: var(--menu);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+  padding: 4px;
+}
+.result {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: start;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  padding: 6px 9px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+  font-size: 12.5px;
+}
+.result:hover { background: var(--glass-hover); }
+.result-kind {
+  flex: none;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-faint);
+  min-width: 58px;
+}
+.result-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+/* The address, which is the only thing distinguishing one endpoint hit from
+   another under the same organization. Given the room the label does not need,
+   which is enough for a full IPv6 address at this size, so it rarely truncates
+   at all.
+   
+   Deliberately not the `direction: rtl` trick for truncating from the left. It
+   would keep the tail of an address, which is the half that differs, and it
+   would also hand a string full of colons to the bidi algorithm and let it move
+   them, which is a bug this codebase has already fixed in three other places. A
+   readable address that occasionally ends in an ellipsis beats a scrambled one
+   that never does. */
+.result-addr {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--text-faint);
+}
+.result-count { margin-inline-start: auto; font-family: var(--mono); font-size: 10.5px; color: var(--text-faint); }
+
+.chips { display: flex; gap: 5px; flex-wrap: wrap; }
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  border: 1px solid color-mix(in srgb, var(--star) 35%, transparent);
+  background: var(--star-soft);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 3px 9px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+}
+.filter-chip:hover { border-color: var(--star); }
+.filter-chip.clear-all { background: none; border-style: dashed; color: var(--text-faint); }
+
+.toolbar-right { margin-inline-start: auto; display: flex; gap: 6px; }
+
+.ghost-btn {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid var(--hairline);
+  background: var(--glass-strong);
+  color: var(--text-dim);
+  border-radius: 7px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-family: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+.ghost-btn:hover { color: var(--text); border-color: var(--text-faint); }
+
+.chip.clickable, .ep-flag.clickable { cursor: pointer; }
+.chip.clickable:hover { border-color: var(--star); color: var(--text); }
+.ep-flag.clickable:hover { color: var(--text); }
+
+/* ---------- modal ---------- */
+
+.modal-backdrop {
+  /* Fixed, not absolute.
+     Absolute positioning resolves against the nearest positioned ancestor,
+     which is <main>, so the dialog centred inside the content column and sat
+     visibly right of the window's centre, offset by the sidebar's width. */
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: color-mix(in srgb, var(--bg-a) 55%, transparent);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+}
+.modal {
+  width: min(440px, 100%);
+  max-height: 100%;
+  overflow-y: auto;
+  /* **Reserve the scrollbar on both edges, so the box stays symmetric.**
+
+     With a plain `auto` overflow the scrollbar eats into the right padding
+     only: the left kept its 24px while the right became 24px plus a 10px
+     scrollbar. Every declared value was symmetric and the rendered box was
+     not, which is exactly the kind of difference that is visible without
+     being explicable. `both-edges` reserves the same gutter on each side
+     whether or not a scrollbar is showing, so the content stays centred and
+     the padding reads equal. */
+  scrollbar-gutter: stable both-edges;
+  padding: 22px 24px 24px;
+  background: var(--glass-strong);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke);
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+}
+.modal-head { display: flex; align-items: center; margin-bottom: 6px; }
+.modal-head h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.02em; }
+/* The close button keeps a comfortable click target, and is pulled outward by
+   exactly the padding that target adds, so the × itself lands on the same
+   25px line as the heading text opposite it. Without this the box edge was
+   flush and the glyph sat 6px further in, which reads as more padding on the
+   right than the left even though every measured value is symmetric. */
+.modal-head .close {
+  margin-inline-start: auto;
+  margin-inline-end: -6px;
+  padding: 1px 6px;
+  background: none;
+  border: 0;
+  color: var(--text-faint);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+.modal-note { margin: 0 0 16px; font-size: 12.5px; line-height: 1.6; color: var(--text-dim); }
+.modal-facts { margin: 14px 0 16px; display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; font-size: 11.5px; }
+.modal-facts dt { color: var(--text-faint); }
+.modal-facts dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+
+/* Centred to match the pairing controls above, so the settings panel does not
+   alternate between centred and left-aligned actions down its length. */
+.capture-panel { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--hairline); }
+.capture-panel h3 { margin: 0 0 6px; font-size: 13px; font-weight: 650; }
+.capture-panel p { margin: 0 0 10px; font-size: 12px; line-height: 1.55; color: var(--text-dim); }
+.iface-list { list-style: none; margin: 0 0 10px; padding: 0; }
+.iface-list li { padding: 9px 0; border-top: 1px solid var(--hairline); }
+.iface-list li:first-child { border-top: 0; }
+/* The one in use is the answer to the question this panel exists to settle, so
+   it is the only row that is not muted. */
+.iface-list li.active .iface-name { color: var(--text); font-weight: 560; }
+.iface-name { font-size: 12px; color: var(--text-dim); }
+/* Clear of the row above it. The name and its pill are inline, and this is the
+   block that follows them, so with no margin the address was flush against the
+   bottom of the pill: measured zero pixels. */
+.iface-sub {
+  display: block;
+  margin-top: 5px;
+  font-family: var(--mono);
+  font-size: 10.5px;
+  line-height: 1.5;
+  color: var(--text-faint);
+}
+.tag.iface-on { background: color-mix(in srgb, var(--star) 18%, transparent); color: var(--star); }
+.tag.iface-rec { background: color-mix(in srgb, var(--calm) 16%, transparent); color: var(--calm); }
+
+.danger-zone { margin-top: 22px; padding-top: 16px; border-top: 1px solid var(--hairline); text-align: center; }
+.danger-zone h3 { margin: 0 0 6px; font-size: 13px; font-weight: 650; color: var(--hot); }
+.danger-zone p { margin: 0 0 12px; font-size: 12px; line-height: 1.55; color: var(--text-dim); }
+/* The sentence gets its own line. All three children were in one flex row, so
+   on a peer card the warning and the two buttons competed for the same width:
+   the text wrapped to two lines beside the buttons and ran under them, and
+   "Yes, unpair" wrapped inside its own button. A confirmation whose wording is
+   half-hidden behind the thing it is warning about is the wrong place to save a
+   row of height. */
+.danger-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  align-items: center;
+}
+.danger-actions .modal-note {
+  flex: 1 1 100%;
+  margin: 0;
+  text-align: center;
+}
+.danger-actions .btn-danger,
+.danger-actions .ghost-btn { white-space: nowrap; }
+.btn-danger {
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  color: #fff;
+  background: var(--hot);
+  border: 1px solid color-mix(in srgb, var(--hot) 70%, black);
+  border-radius: 9px;
+  cursor: pointer;
+}
+
+/* ---------- language picker ---------- */
+
+.langpicker { position: relative; }
+.langpicker.compact { margin-top: 10px; }
+
+/* **A pill, not a link.** Underlined text directly below two real links read as
+   a third one, so the only control on the sign-in screen looked like somewhere
+   else to go. A border and a chevron say "this opens something" without any
+   words, and the underline is gone so the distinction is visible at a glance
+   rather than on inspection. */
+.lang-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: var(--glass);
+  border: 1px solid var(--hairline);
+  border-radius: 999px;
+  color: var(--text-dim);
+  font-family: inherit;
+  font-size: 11px;
+  line-height: 1.4;
+  cursor: pointer;
+  text-decoration: none;
+}
+.lang-link::after {
+  content: '';
+  width: 0;
+  height: 0;
+  border-inline: 3.5px solid transparent;
+  border-top: 4px solid currentColor;
+  opacity: 0.75;
+}
+.lang-link:hover {
+  color: var(--text);
+  background: var(--glass-hover);
+  border-color: color-mix(in srgb, var(--text-faint) 40%, transparent);
+}
+
+.lang-menu {
+  position: absolute;
+  z-index: 60;
+  top: calc(100% + 6px);
+  inset-inline-end: 0;
+  min-width: 180px;
+  /* Tall enough for the full list; the cap and scroll only exist so a short
+     viewport degrades rather than overflowing off-screen. */
+  max-height: min(76vh, 620px);
+  overflow-y: auto;
+  padding: 4px;
+  background: var(--menu);
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow);
+}
+.langpicker.compact .lang-menu { inset-inline: 0; top: auto; bottom: calc(100% + 6px); }
+
+.lang-option {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  text-align: start;
+  border: 0;
+  background: none;
+  border-radius: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--text);
+}
+.lang-option:hover { background: var(--glass-hover); }
+.lang-option.on { background: var(--star-soft); }
+.lang-native { font-size: 13px; }
+.lang-english { margin-inline-start: auto; font-size: 10.5px; color: var(--text-faint); }
+
+/* ---------- right-to-left ---------- */
+
+/* The layout is built from logical properties, so most of it mirrors on its
+   own. These are the handful of places that carry a physical direction. */
+
+[dir='rtl'] .nav-item { text-align: right; }
+
+/* Latin-script technical values (addresses, ports, process names) must not be
+   reordered by the bidi algorithm when embedded in RTL text. */
+[dir='rtl'] .ep-sub,
+[dir='rtl'] .rapsheet dd,
+[dir='rtl'] .ticker-body,
+[dir='rtl'] .modal-facts dd,
+[dir='rtl'] .result-label {
+  direction: ltr;
+  text-align: right;
+}
+
+/* The map is a world projection and is never mirrored: flipping it would put
+   the Americas on the right, which is wrong in every language. */
+[dir='rtl'] .map-wrap { direction: ltr; }
+[dir='rtl'] .legend { flex-direction: row-reverse; }
+
+
+/* ---------- timeline scrub ---------- */
+
+.timeline {
+  /* No horizontal margin: main's flex gap provides the vertical spacing, and any
+     side margin would inset this relative to the toolbar directly above it. */
+  padding: 7px 10px 5px;
+  border-radius: var(--radius-sm);
+  background: var(--glass);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--stroke);
+}
+.timeline-bars { height: 34px; cursor: pointer; }
+.timeline-bars canvas { display: block; width: 100%; height: 100%; }
+
+.timeline-foot {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-top: 3px;
+  font-size: 10px;
+  color: var(--text-faint);
+  font-family: var(--mono);
+}
+.timeline-read { margin-inline: auto; color: var(--text-dim); }
+.timeline-live {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--star);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.map-empty-action { pointer-events: auto; margin-top: 4px; }
+.list-empty {
+  margin: 0;
+  padding: 22px 16px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-faint);
+}
+
+/* ---------- radio chatter ---------- */
+
+.chatter { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; padding-top: 0; }
+
+.chatter-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+}
+.chatter-stats { display: flex; gap: 18px; flex-wrap: wrap; }
+.chatter-stats .stat.flagged b { color: var(--hot); }
+
+.chatter-tabs { margin-inline-start: auto; display: flex; align-items: center; gap: 8px; }
+.chatter-tabs .range {
+  border: 1px solid var(--hairline);
+  background: var(--glass-strong);
+  font-family: inherit;
+  font-size: 11.5px;
+  padding: 5px 11px;
+}
+.chatter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chatter-body { flex: 1; min-height: 0; overflow: hidden; display: flex; }
+
+.dns-list { flex: 1; overflow-y: auto; padding: 4px; min-height: 0; }
+
+.dns-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  padding: 5px 10px;
+  border-radius: 6px;
+  font-family: var(--mono);
+  font-size: 11.5px;
+}
+.dns-row:hover { background: var(--glass-strong); }
+.dns-row.flagged { background: color-mix(in srgb, var(--hot) 7%, transparent); }
+
+.dns-time, .dns-count {
+  flex: none;
+  width: 76px;
+  color: var(--text-faint);
+  font-size: 10.5px;
+}
+.dns-count { text-align: end; width: 52px; }
+
+.dns-name {
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  color: var(--text);
+  cursor: pointer;
+  text-align: start;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 46%;
+}
+.dns-name:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+.dns-tag {
+  flex: none;
+  font-size: 9.5px;
+  font-family: var(--sans);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--hot) 16%, transparent);
+  color: var(--hot);
+  border: 1px solid color-mix(in srgb, var(--hot) 32%, transparent);
+}
+.dns-tag.new {
+  background: var(--star-soft);
+  color: var(--star);
+  border-color: color-mix(in srgb, var(--star) 34%, transparent);
+}
+.dns-tag.malware { background: color-mix(in srgb, var(--hot) 26%, transparent); }
+
+.dns-type { flex: none; width: 44px; color: var(--text-faint); font-size: 10.5px; }
+.dns-answers {
+  margin-inline-start: auto;
+  color: var(--text-faint);
+  font-size: 10.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 34%;
+}
+
+.mode-pill {
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.mode-pill:hover { background: var(--glass-hover); }
+.mode-more {
+  display: inline-grid;
+  place-items: center;
+  width: 13px;
+  height: 13px;
+  margin-inline-start: 2px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--star) 22%, transparent);
+  color: var(--star);
+  font-size: 9px;
+  font-weight: 700;
+}
+
+/* A command for the user to run. Styled as a terminal fragment rather than a
+   control, because clicking it copies text and does not perform the action. */
+/* Deliberately does not wrap internally. The label, the command and the copy
+   button are one object; letting them break apart is what made the banner look
+   bunched at middling widths. When there is no room the whole thing moves to the
+   next line instead. */
+.command {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: nowrap;
+  flex: none;
+}
+.command-label {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.command code {
+  font-family: var(--mono);
+  font-size: 11.5px;
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline);
+  padding: 3px 8px;
+  border-radius: 5px;
+  color: var(--text);
+  user-select: all;
+}
+.command-copy {
+  border: 1px solid var(--hairline);
+  background: none;
+  color: var(--text-faint);
+  border-radius: 5px;
+  padding: 2px 7px;
+  font-family: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+.command-copy:hover { color: var(--text); border-color: var(--text-faint); }
+
+/* ---------- The Roster ---------- */
+
+/* Laid out like the Watchtower: a flexible list beside a fixed side pane, with
+   the same 328px column and the same 10px gutter, so switching views does not
+   move the right-hand edge. main's flex gap supplies the space above, and the
+   grid gap supplies the matching space below the search bar and to the left of
+   the detail pane. */
+.roster {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.roster-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 11px;
+  flex-wrap: wrap;
+}
+
+.roster-search {
+  flex: 1;
+  min-width: 180px;
+  padding: 6px 11px;
+  font-family: inherit;
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  outline: none;
+}
+.roster-search:focus {
+  border-color: color-mix(in srgb, var(--star) 55%, transparent);
+  box-shadow: 0 0 0 3px var(--star-soft);
+}
+
+.roster-count {
+  color: var(--text-faint);
+  font-family: var(--mono);
+  font-size: 11.5px;
+  font-variant-numeric: tabular-nums;
+}
+
+.roster-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 328px;
+  gap: 10px;
+  min-height: 0;
+}
+/* Without a selection the list takes the whole width rather than leaving a gap
+   where the pane would be. */
+.roster-body.solo { grid-template-columns: 1fr; }
+
+.roster-list { overflow: auto; min-width: 0; }
+
+.roster-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+
+.roster-table th {
+  text-align: start;
+  font-weight: 600;
+  font-size: 11px;
+  color: var(--text-faint);
+  padding: 9px 13px;
+  position: sticky;
+  top: 0;
+  background: var(--glass-strong);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border-bottom: 1px solid var(--hairline);
+  white-space: nowrap;
+}
+
+.roster-table td {
+  padding: 7px 13px;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: middle;
+}
+.roster-table tbody tr { cursor: pointer; }
+.roster-table tbody tr:hover { background: var(--glass-hover); }
+.roster-table tbody tr.on { background: var(--glass-hover); box-shadow: inset 2px 0 0 var(--star); }
+.roster-table tbody tr.off td { opacity: 0.5; }
+.roster-table td b { font-weight: 600; }
+
+/* A presence dot rather than a word: the column is scanned, not read.
+   Named `presence` rather than `dot` because `.dot` already belongs to the
+   status bar, and redefining it here silently repainted that indicator. */
+.presence {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  margin-inline-end: 7px;
+  vertical-align: middle;
+  flex: none;
+}
+.presence.up { background: var(--ok); }
+.presence.down { background: var(--text-faint); opacity: 0.5; }
+
+.tag {
+  display: inline-block;
+  margin-inline-start: 6px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  font-size: 10px;
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.tag.self { border-color: color-mix(in srgb, var(--star) 50%, transparent); color: var(--star); }
+.tag.gw { border-color: color-mix(in srgb, var(--warm) 50%, transparent); color: var(--warm); }
+.tag.svc { margin: 0 4px 4px 0; font-family: var(--mono); font-size: 10px; }
+
+/* Trust reads at a glance in the table. Watched is amber rather than red: the
+   device is under scrutiny, not accused of anything. */
+.tag.deputized { border-color: color-mix(in srgb, var(--ok) 50%, transparent); color: var(--ok); }
+.tag.watched { border-color: color-mix(in srgb, var(--warm) 55%, transparent); color: var(--warm); }
+
+.roster-detail { overflow: auto; padding: 13px 15px; min-width: 0; }
+
+.detail-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.detail-head h3 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+
+.detail-why { color: var(--text-faint); font-size: 11.5px; margin: 5px 0 11px; }
+
+.detail-list {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 88px 1fr;
+  gap: 4px 10px;
+  font-size: 11.5px;
+}
+.detail-list dt { color: var(--text-faint); }
+.detail-list dd { margin: 0; overflow-wrap: anywhere; }
+
+.svc-tags { display: flex; flex-wrap: wrap; }
+.muted { color: var(--text-faint); }
+.mono { font-family: var(--mono); }
+
+/* ---------- Deputize, label and notes ---------- */
+
+.trust-row { display: flex; gap: 4px; margin: 9px 0 11px; flex-wrap: wrap; }
+
+.detail-edit { display: flex; flex-direction: column; gap: 7px; margin-bottom: 13px; }
+.detail-edit label {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.detail-edit input,
+.detail-edit textarea,
+.detail-edit select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 5px 9px;
+  font-family: inherit;
+  font-size: 12px;
+  color: var(--text);
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline);
+  border-radius: 7px;
+  outline: none;
+}
+.detail-edit textarea { resize: vertical; }
+.detail-edit input:focus,
+.detail-edit textarea:focus,
+.detail-edit select:focus {
+  border-color: color-mix(in srgb, var(--star) 55%, transparent);
+  box-shadow: 0 0 0 3px var(--star-soft);
+}
+
+.save-failed { color: var(--hot); font-size: 11px; }
+
+/* Data loss is not a styling opportunity: this must not be mistakable for the
+   informational banner. */
+.banner.error {
+  border-color: color-mix(in srgb, var(--hot) 45%, transparent);
+  background: color-mix(in srgb, var(--hot) 8%, var(--glass));
+}
+
+/* Below this width the detail pane takes the full column rather than squeezing
+   the table into unreadability. */
+@media (max-width: 62rem) {
+  .roster-body { grid-template-columns: 1fr; }
+}
+
+/* The Watchtower has the same problem and needed the same answer. Its side pane
+   is a fixed 328px while the map takes what is left, so on a narrow window the
+   map was reduced to a strip about seventy pixels wide, a world map that was
+   not a map, with its own legend and attribution overlapping inside it.
+
+   Stacked instead: the map keeps a usable height and the destination list runs
+   underneath. The map is given an explicit height because it is a canvas filling
+   its container, and in a stacked grid that container would otherwise collapse
+   to nothing. */
+@media (max-width: 62rem) {
+  .watchtower {
+    grid-template-columns: 1fr;
+    grid-auto-rows: min-content;
+    overflow-y: auto;
+  }
+  .watchtower .map-wrap {
+    height: 46vh;
+    min-height: 18rem;
+  }
+
+  /* The legend and the DB-IP attribution are both pinned to the bottom of the
+     map, one to each side, and on a narrow map they land on top of each other.
+     The attribution moves to the top-right, which is empty, since the layer
+     selector sits top-left.
+
+     It moves rather than hides: DB-IP is CC BY 4.0 and the attribution is a
+     licence obligation, not decoration. */
+  .watchtower .attrib {
+    top: 14px;
+    bottom: auto;
+  }
+  .watchtower .legend {
+    max-width: calc(100% - 28px);
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+}
+
+/* ---------- Freshness ---------- */
+
+.freshness { display: flex; align-items: center; gap: 7px; margin-inline-start: auto; }
+
+/* The label holds every string it can ever show, stacked in one grid cell.
+   The cell takes the width of the widest, so the live text changing from
+   "Updated just now" to "Updated 8s ago" cannot resize it, which would
+   otherwise ripple into the flexible search field beside it. */
+.freshness-label {
+  display: grid;
+  color: var(--text-faint);
+  font-size: 11px;
+  /* Digits share one advance width, so 8 -> 12 -> 59 does not re-space the
+     sentence around them. */
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  /* Anchored to the start of the text, not the end.
+     The cell is already fixed to the widest string it can hold, but the live
+     text is shorter than that most of the time, and end-anchoring meant the
+     sentence slid left and right as it changed. Anchoring the start fixes the
+     first character in place and lets the spare room sit between the text and
+     the button, where nothing is reading it. */
+  justify-items: start;
+  text-align: start;
+}
+.freshness-label > * { grid-area: 1 / 1; }
+/* Present for measurement only: it occupies space and is never seen or read. */
+.freshness-ghost { visibility: hidden; pointer-events: none; }
+
+.freshness-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  border-radius: 50%;
+}
+.freshness-btn:hover:not(:disabled) { color: var(--text); }
+.freshness-btn:disabled { cursor: default; }
+.freshness-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--calm) 22%, transparent);
+}
+
+.freshness-ring { position: absolute; inset: 2px; transform: rotate(-90deg); }
+.ring-track { fill: none; stroke: var(--hairline); stroke-width: 2; }
+.ring-fill {
+  fill: none;
+  stroke: color-mix(in srgb, var(--calm) 75%, transparent);
+  stroke-width: 2;
+  stroke-linecap: round;
+  /* No transition: the arc is recomputed every animation frame, so easing
+     between values would only add lag on top of a value that is already
+     smooth, and would make the reset after a refresh crawl backwards. */
+}
+.freshness-btn.busy .ring-fill {
+  stroke: var(--calm);
+  animation: freshness-spin 0.9s linear infinite;
+  transform-origin: 50% 50%;
+}
+@keyframes freshness-spin { to { transform: rotate(360deg); } }
+
+.freshness-glyph { font-size: 11px; line-height: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .freshness-btn.busy .ring-fill { animation: none; }
+}
+
+/* Holds the space a view will occupy while its first request is in flight, so
+   the layout does not jump when the content arrives. Deliberately blank rather
+   than a spinner: these requests are local and usually finish within a frame or
+   two, and a spinner that appears and vanishes that fast is itself a flicker. */
+.chatter-loading { flex: 1; min-height: 0; }
+
+/* ---------- The Precinct Map ---------- */
+
+.precinct {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+}
+
+.precinct-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 7px 11px;
+  flex-wrap: wrap;
+}
+
+.precinct-legend {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-faint);
+}
+.precinct-legend .key {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+.precinct-legend .key.device { background: var(--ok); }
+.precinct-legend .key.org { background: var(--calm); margin-inline-start: 10px; }
+/* Same purple the Watchtower uses for a peer's arcs, so the two views agree
+   about what the colour means. */
+.precinct-legend .key.peer { background: var(--arc-peer); margin-inline-start: 10px; }
+
+.precinct-note { font-size: 11px; color: var(--text-faint); }
+
+.precinct-canvas { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+.precinct-canvas canvas { display: block; width: 100%; height: 100%; }
+
+.precinct-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  /* Centred as a block now that it carries a heading and a hint rather than a
+     single line, so the three parts stack and read as one message. */
+  justify-items: center;
+  text-align: center;
+  gap: 0.4rem;
+  margin: 0;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+
+/* Follows the cursor's node, so it must not intercept the pointer or the hover
+   would flicker between the node and its own tooltip. */
+/* A destination this network had not contacted before the window. The one fact
+   on this map worth reacting to, so it is coloured rather than listed. */
+.precinct-tip .tip-new { color: var(--star); font-weight: 560; }
+
+.precinct-tip {
+  position: absolute;
+  transform: translate(-50%, -140%);
+  pointer-events: none;
+  padding: 5px 9px;
+  border-radius: var(--radius-sm);
+  background: var(--map-tooltip-bg);
+  border: 1px solid var(--map-tooltip-edge);
+  box-shadow: var(--shadow-sm);
+  font-size: 11px;
+  line-height: 1.35;
+  white-space: nowrap;
+  display: flex;
+  flex-direction: column;
+}
+.precinct-tip b { font-weight: 620; }
+.precinct-tip span { color: var(--text-faint); font-size: 10.5px; }
+
+/* The version sits apart from the privacy line rather than directly beneath it:
+   they are unrelated statements, and the gap stops them reading as one sentence.
+   Right-aligned so it reads as a build stamp rather than a continuation of the
+   sentence above it. `text-align: end` rather than `right` so it follows the
+   writing direction in Arabic and Hebrew. */
+/* min-height reserves the row before the version is known, so the footer does
+   not jump when the summary arrives. 1.55 is the footer's line-height. */
+.nav-version { display: block; margin-top: 9px; min-height: 1.55em; }
+/* The build number is the changing half, so it is dimmed against the version
+   rather than competing with it. */
+.nav-build { color: var(--text-faint); opacity: 0.8; }
+
+/* ---------- Help ---------- */
+
+/* The panel fills the content area like every other view; only the prose inside
+   it is constrained. Putting the max-width on the panel left the panel itself
+   narrow with bare background beside it, which read as a broken layout rather
+   than as a considered measure. */
+.help {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 24px 28px;
+  min-height: 0;
+}
+
+/* **One column, full width.**
+   This flowed into as many columns as fit, which was a literal reading of
+   "use the full width" and produced a newspaper: the eye finishes a section,
+   travels back up the page to find the next one, and the order of the material
+   stops meaning anything. Reading order should be top to bottom.
+   The width is handled where it is actually a problem instead. The label and
+   description grids below read fine at any width because each line is short by
+   construction; only running prose needs a measure, and it gets one. */
+.help-inner {
+  display: block;
+}
+
+/* No measure cap. Capping the prose left half the pane empty, which is not
+   what "use the full width" meant and looked like a layout that had failed
+   rather than one that had chosen. Every paragraph here is two to four
+   sentences, so a wide line costs a reader very little; the long-measure
+   problem is one of many paragraphs stacked, and there are none. */
+
+/* The heading introduces the whole page, so it spans whatever the grid is. */
+.help-caps { list-style: none; margin: 6px 0 12px; padding: 0; }
+.help-caps li { padding: 2px 0; color: var(--text-dim); }
+/* Available and unavailable read differently at a glance, because the point of
+   the list is the difference between them rather than the items themselves. */
+.help-caps li.on { color: var(--text); }
+.help-caps li.off { color: var(--text-faint); }
+
+.help-head { grid-column: 1 / -1; }
+
+
+
+.help-head { margin-bottom: 20px; }
+.help-head h2 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.02em; }
+.help-head p { margin: 4px 0 0; font-size: 12.5px; color: var(--text-faint); }
+
+.help-section { margin-bottom: 20px; }
+.help-section h3 {
+  margin: 0 0 6px;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+}
+.help-section p { margin: 0 0 8px; font-size: 12.5px; line-height: 1.65; color: var(--text-dim); }
+.help-section p b { color: var(--text); font-weight: 620; }
+
+/* Marks whichever mode is running, so the paragraph explaining it is the one
+   the reader's eye lands on. A rule and a tint rather than a label, because the
+   sentence already names the mode and a second name would be noise. */
+.help-section p.here {
+  color: var(--text);
+  border-inline-start: 2px solid var(--star);
+  padding-inline-start: 10px;
+  margin-inline-start: -12px;
+}
+
+.help-aside {
+  border-inline-start: 2px solid var(--hairline);
+  padding-inline-start: 10px;
+  color: var(--text-faint) !important;
+}
+
+/* The facts about this install. Same two-column shape as .help-views, so the
+   page has one way of presenting a label and a value rather than two. */
+/* The global layer bar. Same shape as the control it replaces, which used to
+   sit inside the Watchtower, so it reads as the same thing moved rather than as
+   a new one. */
+.layerbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--glass);
+  border: 1px solid var(--stroke);
+}
+.layerbar button {
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  background: none;
+  color: var(--text-dim);
+  font-size: 11.5px;
+  cursor: pointer;
+  /* A peer's name is user-supplied and can be long. Truncate rather than let
+     one machine push the rest of the control off the row. */
+  max-width: 14rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.layerbar button:hover { color: var(--text); }
+.layerbar button.on {
+  color: var(--text);
+  border-color: var(--stroke);
+  background: var(--glass);
+  font-weight: 560;
+}
+
+/* Devices a peer reported. Visually apart from the Roster table above it,
+   because it is a different kind of knowledge: named and counted, not
+   inspected. */
+/* No margin: .roster is a flex column with a 10px gap, so a margin here
+   added to it and made this one seam 20px while every other was 10. */
+.roster-peers { padding: 12px 14px 14px; }
+.roster-peers h3 {
+  margin: 0 0 4px;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-faint);
+  font-weight: 600;
+}
+.roster-peers-note {
+  margin: 0 0 10px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-faint);
+}
+.roster-peers ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.roster-peers li {
+  border-inline-start: 2px solid var(--arc-peer);
+  padding: 4px 0 4px 10px;
+}
+.rp-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.rp-name { font-weight: 560; font-size: 12.5px; }
+.rp-sub { font-size: 11.5px; color: var(--text-dim); margin-top: 2px; }
+.rp-apps { margin-top: 4px; }
+
+/* The peer that reported a search hit. Carries the same purple the rest of the
+   product uses for peer data, so it needs no words to say what it means. */
+.result-peer {
+  font-size: 10.5px;
+  color: var(--arc-peer);
+  border: 1px solid var(--arc-peer);
+  border-radius: 999px;
+  padding: 0 6px;
+  white-space: nowrap;
+  opacity: 0.85;
+}
+
+/* Reveals the peer destinations held back on the Everything layer. */
+.ep-more {
+  display: block;
+  width: 100%;
+  padding: 6px 14px 8px;
+  background: none;
+  border: none;
+  text-align: start;
+  font-size: 11px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.ep-more:hover { color: var(--text); }
+
+/* The delayed loading indicator. See web/src/loading.tsx for why it waits
+   before appearing rather than showing immediately or showing nothing.
+
+   min-height reserves the row so the dialog does not resize under the reader
+   once the content lands. */
+.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  min-height: 84px;
+  color: var(--text-faint);
+  font-size: 12.5px;
+}
+.loading-spin {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  border: 2px solid var(--hairline);
+  /* One coloured arc against a neutral ring is what reads as rotation. */
+  border-top-color: var(--star);
+  animation: loading-spin 0.7s linear infinite;
+}
+@keyframes loading-spin { to { transform: rotate(360deg); } }
+
+/* Motion is the whole mechanism here, so with it suppressed the ring would sit
+   there as a static circle saying nothing. Pulse the label instead. */
+@media (prefers-reduced-motion: reduce) {
+  .loading-spin { animation: none; }
+  .loading-label { animation: breathe 1.6s ease-in-out infinite; }
+}
+
+/* Map zoom, bottom-inline-end so it clears the legend and the origin note.
+   Inline-end rather than right, so it moves to the other side in Arabic and
+   Hebrew along with everything else. */
+.map-zoom {
+  position: absolute;
+  /* Clear of the attribution, which sits in the same corner. At 12px the
+     bottom button was drawn straight over "(CC BY 4.0)", hiding a licence
+     credit behind a control, which is both ugly and the one line on the map
+     that is there for legal reasons. The stack grew a third button when
+     country borders arrived, but the collision was there before that: the
+     lowest button and the credit were always at the same height. */
+  bottom: 34px;
+  inset-inline-end: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 2;
+}
+/* The border toggle sits with the zoom buttons because it belongs to the map
+   rather than to the data, and it shows its state: a control that does nothing
+   visible on a map with no arcs over land needs to say whether it is on. */
+.map-countries.on {
+  background: var(--star-soft);
+  border-color: color-mix(in srgb, var(--star) 45%, transparent);
+  color: var(--star);
+}
+
+.map-zoom-btn {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  line-height: 1;
+  border-radius: 7px;
+  border: 1px solid var(--hairline);
+  background: var(--map-tooltip-bg);
+  color: var(--text-dim);
+  cursor: pointer;
+  /* The map is a busy background, so the control needs its own edge to sit on
+     rather than relying on contrast with whatever is behind it. */
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+}
+.map-zoom-btn:hover:not(:disabled) { color: var(--text); border-color: var(--text-faint); }
+.map-zoom-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Why the peer panel is shorter than the Rap Sheet. Set apart from the list
+   above it: it explains the absence of rows rather than describing one. */
+.rapsheet-note {
+  margin: 10px 0 0;
+  padding-top: 9px;
+  border-top: 1px solid var(--hairline);
+  font-size: 11px;
+  line-height: 1.55;
+  color: var(--text-faint);
+}
+
+.help-facts {
+  margin: 0 0 8px;
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: 4px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.help-facts dt { color: var(--text-dim); }
+.help-facts dd { margin: 0; color: var(--text); font-weight: 560; }
+/* A filesystem path is a literal to be read character by character, and it is
+   the one value here long enough to wrap badly. Monospaced, and allowed to
+   break anywhere rather than pushing the panel wider than the window. */
+.help-facts dd.help-path {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  font-weight: 400;
+  overflow-wrap: anywhere;
+}
+
+.help-installs { margin: 0 0 4px; }
+.help-install { margin-bottom: 14px; }
+.help-install dt {
+  font-weight: 620;
+  font-size: 12.5px;
+  margin-bottom: 4px;
+}
+.help-install dd { margin: 0; }
+.help-install dd p {
+  margin: 0 0 6px;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--text-dim);
+}
+/* Each command on its own line. The Command component is inline, because most
+   of its uses sit in a sentence, so the stacking is done here by its container
+   rather than by changing the component for everybody. */
+.help-install .command { display: flex; margin-bottom: 4px; }
+
+/* Two builds of one program, which is the most confusing thing about a
+   release, so it gets a table. */
+.help-builds {
+  width: 100%;
+  border-collapse: collapse;
+  /* Fixed, so the two build columns are equal and comparable. Left to the
+     auto algorithm the Standard column took two thirds of the width purely
+     because its cells held more words, which is the opposite of what a
+     side-by-side comparison is for. */
+  table-layout: fixed;
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+.help-builds th,
+.help-builds td {
+  text-align: start;
+  vertical-align: top;
+  padding: 6px 10px 6px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.help-builds thead th:first-child { width: 24%; }
+.help-builds thead th { font-weight: 620; color: var(--text); }
+.help-builds tbody th { font-weight: 500; color: var(--text-dim); }
+.help-builds tbody td { color: var(--text); }
+.help-builds tbody tr:last-child th,
+.help-builds tbody tr:last-child td { border-bottom: none; }
+
+@media (max-width: 46rem) {
+  .help-facts { grid-template-columns: 1fr; gap: 2px 0; }
+  .help-facts dd { margin-bottom: 8px; }
+  .help-builds { font-size: 12px; }
+}
+
+/* Flags and their one-line explanations. Same grid as .help-views, but the
+   term is a literal to be typed, so it is monospaced and never wraps mid-flag:
+   a flag broken across two lines is a flag somebody retypes wrongly. */
+.help-flags {
+  margin: 0 0 10px;
+  display: grid;
+  grid-template-columns: minmax(10rem, auto) 1fr;
+  gap: 6px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.help-flags dt code {
+  font-family: var(--mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  white-space: nowrap;
+}
+.help-flags dd { margin: 0; color: var(--text-dim); }
+
+@media (max-width: 46rem) {
+  .help-flags { grid-template-columns: 1fr; gap: 2px 0; }
+  .help-flags dd { margin-bottom: 8px; }
+}
+
+/* Numbered because the order is the whole point: the two machines take
+   different roles, and doing step three first is what makes both sides sit
+   waiting for each other. padding-inline-start rather than padding-left so the
+   numbers stay on the reading side in Arabic and Hebrew. */
+.help-steps {
+  margin: 0 0 8px;
+  padding-inline-start: 20px;
+  font-size: 12.5px;
+  line-height: 1.65;
+  color: var(--text-dim);
+}
+.help-steps li { margin-bottom: 6px; }
+.help-steps li::marker { color: var(--text-faint); }
+
+.help-views {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(9rem, auto) 1fr;
+  gap: 7px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.help-views dt { font-weight: 620; }
+.help-views dd { margin: 0; color: var(--text-dim); }
+
+@media (max-width: 46rem) {
+  .help-views { grid-template-columns: 1fr; gap: 2px 0; }
+  .help-views dd { margin-bottom: 8px; }
+}
+
+/* ---------- Sidebar widgets ---------- */
+
+/* Pushed to the top of the nav's spare room, with the privacy footer keeping
+   its own margin-top:auto below. */
+.widgets {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  /* **Do not shrink, and do not scroll separately.**
+     This block holds the clock, the last-24-hours summary and Most Wanted, and
+     it used to be a flex child that could shrink with its own scroll area. On a
+     short window that is a bad combination: rather than making the sidebar
+     scroll, it collapsed itself (measured at **13px, down from 334**) so
+     Most Wanted was not merely below the fold, it had no fold to be below. The
+     content was unreachable by any amount of scrolling.
+     Keeping its natural height instead pushes the overflow up to the nav, which
+     scrolls the whole pane as one thing, which is what somebody reaching for
+     Most Wanted expects. */
+  flex-shrink: 0;
+}
+
+.widget { flex: none; }
+
+.w-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-faint);
+  font-family: inherit;
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: start;
+  cursor: pointer;
+}
+.w-head:hover { background: var(--glass-hover); color: var(--text-dim); }
+.w-head:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--star-soft); }
+
+.w-caret {
+  display: inline-block;
+  transition: transform 0.15s ease;
+  font-size: 11px;
+  line-height: 1;
+}
+.widget.open .w-caret { transform: rotate(90deg); }
+[dir='rtl'] .w-caret { transform: rotate(180deg); }
+[dir='rtl'] .widget.open .w-caret { transform: rotate(90deg); }
+
+.w-body { padding: 2px 8px 9px; }
+
+/* Tabular figures so the seconds do not re-space the clock every tick. */
+.w-clock {
+  display: block;
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-size: 17px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.w-sub { font-size: 10.5px; color: var(--text-faint); margin-top: 3px; }
+
+.w-line { display: flex; align-items: baseline; gap: 6px; font-size: 11px; margin-top: 3px; }
+.w-line b {
+  font-size: 14px;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.w-line span { color: var(--text-faint); }
+
+.w-link {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: start;
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.w-link:hover { color: var(--star); }
+
+/* ---------- Most wanted ---------- */
+
+/* A notice board pinned below the readouts, not another statistic.
+   The wanted-poster nod is deliberately restrained: a double rule, letterspaced
+   uppercase, and a mugshot-style name. Going further, aged paper, stencil type
+ , would fight the glass surface everything else sits on, and a security tool
+   that looks like a game loses the authority it needs when it does have
+   something to say. */
+.wanted-card {
+  margin-top: 10px;
+  padding: 9px 10px 10px;
+  border: 1px solid var(--hairline);
+  /* The inner rule is what reads as "poster" rather than "panel". */
+  box-shadow: inset 0 0 0 1px var(--glass-strong), inset 0 0 0 2px var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--glass-strong);
+}
+
+/* When there is nothing wanted the card recedes: no inner rule, no weight. */
+.wanted-card.quiet {
+  box-shadow: none;
+  background: none;
+  border-style: dashed;
+}
+
+.wanted-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  margin-bottom: 7px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.wanted-title {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--text-dim);
+}
+.wanted-card.quiet .wanted-title { color: var(--text-faint); font-weight: 600; letter-spacing: 0.14em; }
+
+.wanted-count {
+  font-family: var(--mono);
+  font-size: 9.5px;
+  font-variant-numeric: tabular-nums;
+  color: var(--hot);
+  white-space: nowrap;
+}
+
+.wanted-quiet { display: flex; flex-direction: column; gap: 1px; }
+.wanted-quiet b { font-size: 11.5px; font-weight: 620; color: var(--ok); }
+.wanted-quiet span { font-size: 10px; color: var(--text-faint); }
+
+.wanted-list { display: flex; flex-direction: column; gap: 6px; }
+
+.wanted-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: "who stars" "why stars";
+  gap: 0 8px;
+  width: 100%;
+  padding: 4px 5px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.wanted-row:hover { background: var(--glass-hover); }
+.wanted-row:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--star-soft); }
+
+/* Uppercase and monospaced, the way a name reads on a notice. */
+.wanted-who {
+  grid-area: who;
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.wanted-why { grid-area: why; font-size: 9.5px; color: var(--text-faint); margin-top: 1px; }
+
+/* The stars are the game reference, and the only place it is loud: filled ones
+   glow, empty ones are hollow rather than grey, which is what makes a level
+   readable at a glance instead of countable. */
+.wanted-stars {
+  grid-area: stars;
+  align-self: center;
+  display: inline-flex;
+  gap: 1.5px;
+  font-size: 11px;
+  line-height: 1;
+}
+.wanted-stars span {
+  color: transparent;
+  -webkit-text-stroke: 1px var(--hairline);
+  text-shadow: none;
+}
+.wanted-stars span.on {
+  color: var(--star);
+  -webkit-text-stroke: 0;
+  text-shadow: 0 0 5px color-mix(in srgb, var(--star) 55%, transparent);
+}
+/* The top star of a three-star finding breathes, so the worst thing on the
+   board is the thing the eye goes to. */
+.wanted-stars.max span.on:last-of-type { animation: wanted-pulse 1.9s ease-in-out infinite; }
+@keyframes wanted-pulse {
+  0%, 100% { opacity: 1 }
+  50% { opacity: 0.45 }
+}
+@media (prefers-reduced-motion: reduce) {
+  .wanted-stars.max span.on:last-of-type { animation: none; }
+}
+
+.wanted-more { font-size: 9.5px; color: var(--text-faint); padding-inline-start: 5px; }
+
+/* The port check sits with the services it produces. */
+.scan-row { display: flex; align-items: center; gap: 8px; margin-top: 7px; flex-wrap: wrap; }
+.scan-row .range { border: 1px solid var(--hairline); }
+.scan-row .range:disabled { opacity: 0.6; cursor: default; }
+
+/* How a service was learned, at a glance: advertised is plain, seen in traffic
+   is tinted, answered-when-asked is outlined. Different claims, different
+   weight. */
+.tag.svc.observed { border-color: color-mix(in srgb, var(--calm) 40%, transparent); color: var(--calm); }
+.tag.svc.scan { border-color: color-mix(in srgb, var(--warm) 45%, transparent); color: var(--warm); }
+
+/* ---------- The Wanted List ---------- */
+
+.wantedlist { flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 0; }
+
+.wl-head { display: flex; align-items: center; gap: 14px; padding: 9px 13px; flex-wrap: wrap; }
+.wl-title h2 { margin: 0; font-size: 14px; font-weight: 650; letter-spacing: -0.01em; }
+.wl-title span { font-size: 11px; color: var(--text-faint); }
+
+/* The common state on a healthy network, so it must read as a result rather
+   than as an empty container. */
+.wl-clear { padding: 22px 24px; display: flex; flex-direction: column; gap: 3px; }
+.wl-clear b { font-size: 14px; font-weight: 650; color: var(--ok); }
+.wl-clear span { font-size: 12.5px; color: var(--text-faint); }
+
+.wl-body { flex: 1; overflow-y: auto; min-height: 0; padding: 4px; }
+
+.wl-subject { border-bottom: 1px solid var(--hairline); }
+.wl-subject:last-child { border-bottom: 0; }
+
+.wl-row {
+  display: grid;
+  grid-template-columns: 64px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+}
+.wl-row:hover { background: var(--glass-hover); }
+.wl-subject.on .wl-row { background: var(--glass-hover); }
+
+/* A bar, not a number. The exact score is not meaningful; the comparison
+   between rows is. */
+.wl-meter {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--hairline);
+  overflow: hidden;
+  display: block;
+}
+.wl-meter-fill {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--warm), var(--hot));
+}
+
+.wl-who { font-size: 13px; font-weight: 620; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wl-count { font-size: 11px; color: var(--text-faint); white-space: nowrap; }
+
+.wl-detail { padding: 0 12px 12px 88px; display: flex; flex-direction: column; gap: 10px; }
+
+.wl-finding {
+  border-inline-start: 2px solid var(--hairline);
+  padding-inline-start: 11px;
+}
+.wl-why { margin: 0 0 5px; font-size: 12.5px; line-height: 1.55; color: var(--text); }
+.wl-meta { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 10.5px; color: var(--text-faint); }
+.wl-meta .range { border: 1px solid var(--hairline); }
+
+.wl-open {
+  align-self: start;
+  border: 0;
+  background: none;
+  padding: 0;
+  font: inherit;
+  font-size: 11.5px;
+  color: var(--calm);
+  cursor: pointer;
+}
+.wl-open:hover { text-decoration: underline; text-underline-offset: 2px; }
+
+@media (max-width: 46rem) {
+  .wl-detail { padding-inline-start: 12px; }
+}
+
+/* Rule and platform descriptions: a term and its explanation. */
+.help-rules {
+  margin: 0 0 8px;
+  display: grid;
+  grid-template-columns: minmax(7rem, auto) 1fr;
+  gap: 7px 14px;
+  font-size: 12.5px;
+  line-height: 1.6;
+}
+.help-rules dt { font-weight: 620; }
+.help-rules dd { margin: 0; color: var(--text-dim); }
+
+@media (max-width: 46rem) {
+  .help-rules { grid-template-columns: 1fr; gap: 2px 0; }
+  .help-rules dd { margin-bottom: 8px; }
+}
+
+/* ---------- Finding alert ---------- */
+
+.bolo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 13px;
+  border-color: color-mix(in srgb, var(--warm) 45%, transparent);
+  background: color-mix(in srgb, var(--warm) 7%, var(--glass));
+}
+
+.bolo-text { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.bolo-text b { font-size: 12.5px; font-weight: 650; }
+.bolo-text span {
+  font-size: 11.5px;
+  color: var(--text-dim);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.bolo-more { color: var(--text-faint) !important; font-size: 10.5px !important; }
+
+.bolo .range { border: 1px solid var(--hairline); flex: none; }
+
+/* ── The Dispatch ────────────────────────────────────────────────────────────
+   Peering lives inside Settings. Styled to sit quietly: it is off for most
+   installs, and a section that shouts would misrepresent how central it is. */
+
+.dispatch {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.dispatch h3 {
+  margin: 0 0 0.6rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.01em;
+}
+
+/* A peer id is compared character by character across two screens, so it gets
+   a monospace face and enough tracking that groups stay distinct. */
+.peer-id {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--text-dim);
+}
+
+.peer-list {
+  list-style: none;
+  margin: 0.75rem 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.peer {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: 10px;
+  background: var(--glass);
+}
+
+.peer-head {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* A peer with no name of its own shows its fingerprint here, and it is long.
+   Allowed to wrap rather than forced onto one line, and the status stays put
+   beside it. */
+.peer-head strong { font-size: 0.9rem; min-width: 0; overflow-wrap: anywhere; }
+.peer-head { flex-wrap: wrap; }
+
+/* The rename affordance sits quietly beside the name and comes forward on
+   hover or focus. It matters most on the peer that has no name, which is the
+   one whose heading is a fingerprint and looks least like something you are
+   allowed to change. */
+.peer-rename-btn {
+  flex: none;
+  background: none;
+  border: 0;
+  padding: 0;
+  width: 1.1rem;
+  line-height: 1;
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--text-faint);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.peer:hover .peer-rename-btn,
+.peer-rename-btn:focus-visible { opacity: 1; }
+.peer-rename-btn:hover { color: var(--text); }
+
+.peer-rename {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  width: 100%;
+}
+.peer-rename input {
+  flex: 1 1 10rem;
+  min-width: 0;
+  padding: 4px 8px;
+  font: inherit;
+  font-size: 0.82rem;
+  color: var(--text);
+  background: var(--menu);
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+}
+
+.peer-status {
+  margin-inline-start: auto;
+  font-size: 0.75rem;
+  color: var(--text-dim);
+}
+
+/* The dot carries the state. Grey is deliberately not red: an unreachable peer
+   is ordinary (a closed laptop) and colouring it as a fault would teach the
+   user to ignore the colour that does mean something. */
+.peer .presence {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--text-faint);
+  flex: none;
+}
+
+.peer-connected .presence { background: var(--ok); }
+.peer-suspended .presence { background: var(--warm); }
+.peer-suspended { opacity: 0.72; }
+
+/* The facts about a peer: fingerprint, address, when it was last heard from.
+   Spaced apart rather than merely separated, because they are three unrelated
+   things and at 0.9rem the address and the last-heard time read as one
+   sentence: "192.168.1.24:2912 Last heard from now". */
+.peer-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.4rem;
+  margin-top: 0.55rem;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+/* The fingerprint gets its own line rather than sharing one with whatever
+   happens to fit beside it. At some widths the address sat next to it and the
+   last-heard time wrapped alone underneath, which put three unrelated facts
+   into two lines split at an arbitrary point. */
+.peer-meta > .peer-id { flex-basis: 100%; }
+
+/* Its own line, with room above and below: it is a warning about the data,
+   sitting between the facts and the buttons, and it was being read as part of
+   whichever line it happened to land next to. */
+.peer-stale {
+  color: var(--warm);
+  flex-basis: 100%;
+  margin-top: 0.15rem;
+}
+
+/* **The buttons on a peer card, separated from the facts above them.**
+ *
+ * This had no top margin at all: the gap between the last line of text and the
+ * buttons measured zero, so "Data is out of date" and the address sat flush
+ * against Stop believing this peer and Unpair. A destructive control was
+ * touching a line somebody was still reading.
+ *
+ * Worth naming why it survived three attempts to fix it: the spacing was being
+ * added to .peer-actions, which is a real class on a different element in the
+ * same panel. The CSS was valid, applied to something, and never to this. */
+.peer-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 0.95rem 0 0;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--hairline);
+}
+
+/* Sits directly above the two buttons it describes, because the failure it
+   prevents is somebody pressing one without knowing the other exists. */
+.pair-roles {
+  margin: 0 0 0.6rem;
+}
+
+/* Turning sharing off is a different kind of action from the two above it, and
+   had no styling of its own at all: it inherited the paragraph rules, so it sat
+   flush against the "Enter a code" button with nothing between them and read as
+   a third item in the same group. Separated by a rule and given room, because
+   the two above are things you do to pair and this one undoes the feature. */
+.dispatch-off-note {
+  margin: 0.9rem 0 0;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--hairline);
+  /* Centred, like the two buttons above it. Left-aligned it read as a stray
+     control rather than the deliberate end of the section. */
+  text-align: center;
+}
+
+/* Held well clear of the text above it. At 0.6rem the buttons sat directly
+   under the last line of metadata, so a destructive control ("Unpair") was
+   crowding a line somebody was still reading, and the card looked cramped
+   rather than dense. */
+/* Separated from the facts above, not merely spaced from them.
+   A gap alone was not enough: at 16px the buttons still read as another row of
+   the same block, so a destructive control sat directly under a line somebody
+   was still reading. The rule says where the card stops describing the peer
+   and starts offering to change it. */
+.peer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.9rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--hairline);
+}
+
+/* The pairing code: 40 characters somebody is copying by hand. Large, spaced,
+   and breakable, because a code that overflows its box cannot be read. */
+/* Sits where the "waiting for the other machine" line was, so the modal keeps
+   its height when the countdown runs out instead of jumping. */
+.pair-renew {
+  align-self: center;
+  margin-top: 0.2rem;
+}
+
+.pair-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 1.05rem;
+  letter-spacing: 0.08em;
+  line-height: 1.9;
+  text-align: center;
+  /* Break between groups, never inside one.
+     break-all broke wherever the line ran out, so a code could show
+     "...HJR9H-1" and carry "42RH" to the next line: the group a reader is
+     tracking splits after its first character, and they lose their place in a
+     forty-character string they are copying by hand. Left to itself the
+     browser breaks after a hyphen, which is exactly the boundary the groups
+     already mark. */
+  word-break: normal;
+  overflow-wrap: normal;
+  margin: 0.8rem 0;
+  padding: 0.9rem 0.7rem;
+  border-radius: 10px;
+  background: var(--glass-strong);
+  border: 1px solid var(--hairline);
+  /* Selectable in one gesture, since the alternative to typing it is copying. */
+  user-select: all;
+}
+
+.code-input {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.04em;
+}
+
+.pair-modal { max-width: 30rem; }
+
+/* A countdown reflows as digits drop unless the figures are tabular and the
+   line has room reserved for its longest form. */
+.countdown {
+  font-variant-numeric: tabular-nums;
+  min-height: 1.4em;
+}
+
+/* Layer selector: which machines the Watchtower is drawing. Sits with the
+   legend rather than in the toolbar, it describes what the map is showing,
+   which is the legend's job. */
+.layers {
+  position: absolute;
+  top: 0.85rem;
+  inset-inline-start: 0.85rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  z-index: 2;
+}
+
+.layers button {
+  font: inherit;
+  font-size: 0.72rem;
+  letter-spacing: 0.02em;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--hairline);
+  background: var(--glass-strong);
+  backdrop-filter: var(--blur);
+  color: var(--text-dim);
+  cursor: pointer;
+  max-width: 12rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.layers button:hover { background: var(--glass-hover); }
+
+.layers button.on {
+  color: var(--text);
+  border-color: var(--calm);
+  box-shadow: inset 0 0 0 1px var(--calm);
+}
+
+/* A note in the ordinary flow of a view: Radio Chatter explaining that peers
+   never send domains, the Wanted List explaining that it judges this machine
+   only. No positioning: these sit where they are written.
+
+   This rule used to carry the map overlay's absolute positioning, so the two
+   notes above were lifted out of the flow and floated over whatever happened
+   to be behind them. The map's version is .map-note below. */
+.layer-note {
+  margin: 0 0 8px;
+  max-width: 46rem;
+  font-size: 0.72rem;
+  line-height: 1.45;
+  color: var(--text-faint);
+  text-wrap: balance;
+}
+
+/* Copy and paste on the pairing screens. Quiet until hovered: they sit beside
+   a code somebody is reading, and should not compete with it. */
+.clip-btn {
+  border: 1px solid var(--hairline);
+  background: none;
+  color: var(--text-dim);
+  border-radius: 6px;
+  /* 2px of vertical padding read as a squashed label rather than a button,
+     next to inputs that are comfortably tall. */
+  padding: 5px 10px;
+  font-size: 11px;
+  line-height: 1.35;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.clip-btn:hover { color: var(--text); border-color: var(--text-faint); }
+
+.pair-copy { display: flex; align-items: center; gap: 10px; justify-content: center; }
+.pair-addr { display: flex; align-items: center; gap: 8px; }
+
+/* Asking before a live code is thrown away. */
+.pair-confirm {
+  margin: 8px 0 4px;
+  padding: 10px 12px;
+  border: 1px solid var(--stroke);
+  border-radius: var(--radius-sm);
+  background: var(--glass);
+}
+.pair-confirm p { margin: 0 0 8px; font-size: 12.5px; line-height: 1.5; }
+.pair-confirm-row { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+.pair-confirm-row .btn-danger,
+.pair-confirm-row .ghost-btn { flex: 0 1 auto; white-space: nowrap; }
+
+/* Who made the lookup, and with what.
+
+   The feed listed domains with no attribution, so in Patrol Mode it was one
+   stream from every machine on the network and there was no way to tell whose
+   was whose. The device carries the same purple the rest of the product uses
+   for something belonging to another machine; the application is quieter,
+   because it is only ever present for this machine's own lookups. */
+.dns-device,
+.dns-proc {
+  font-size: 10.5px;
+  padding: 0 6px;
+  border-radius: 999px;
+  white-space: nowrap;
+  border: 1px solid var(--hairline);
+  color: var(--text-dim);
+}
+.dns-device { border-color: var(--arc-peer); color: var(--arc-peer); }
+
+/* The row of captions above the map.
+
+   They were overlaid on the canvas, which is how an explanation ended up
+   covering the thing it explains. Above it they need no plate, no z-index and
+   no positioning, and they push the map down by one line instead of hiding a
+   corner of it. */
+.map-notes {
+  /* **Spans the row.** .watchtower is a two-column grid, map and side pane, so
+     a third child silently became the first cell: it took column one, pushed
+     the map into the 328px pane and the destinations list onto a second row.
+     The caption describes the whole view, so it belongs across both columns
+     rather than in either one. */
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 0.2rem 2px;
+}
+.map-notes .layer-note { margin: 0; }
+
+/* Below this the command can be wider than the banner itself. The code scrolls
+   inside its own box rather than pushing the page sideways, the rule the
+   Artifact guidance states generally: wide content scrolls in its own
+   container, the body never scrolls horizontally. */
+@media (max-width: 40rem) {
+  .command { max-width: 100%; }
+  .command code {
+    overflow-x: auto;
+    white-space: nowrap;
+    min-width: 0;
+  }
+  .banner button { margin-left: 0; }
+}
+
+/* ── Narrow windows ──────────────────────────────────────────────────────────
+   The status bar carries four things, and they are not equally important. As
+   room runs out they are shed in order of how much they earn their place:
+   the live ticker first (pleasant, never load-bearing), then the counts (also
+   on the Watchtower itself). The mode pill and the action buttons always stay:
+   one says what the tool can currently see, the others are the only way to
+   reach settings.
+
+   Shedding rather than shrinking, because a status bar of truncated fragments
+   tells you less than a shorter one that is still readable. */
+
+@media (max-width: 78rem) {
+  .statusbar .ticker { display: none; }
+}
+
+@media (max-width: 60rem) {
+  .statusbar { gap: 10px; padding: 0 10px; }
+  .statusbar .stat { display: none; }
+}
+
+/* The shell itself must never be the thing that overflows. */
+main, .statusbar, .banner, .toolbar { min-width: 0; }
+
+/* The paired-peer badge on a Roster row. A peer is not a separate entry, it is
+   a machine already in the list, marked. Colour follows the connection: green
+   when reachable, muted when not, so the badge says "paired" and the shade says
+   "and currently reachable". */
+.tag.peer { background: color-mix(in srgb, var(--calm) 16%, transparent); color: var(--calm); }
+.tag.peer.connected { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.tag.peer.suspended { background: color-mix(in srgb, var(--warm) 16%, transparent); color: var(--warm); }
+
+.roster-elsewhere { color: var(--text-faint); }
+
+/* The origin note sits below the layer selector when both are showing. */
+
+/* While a portalled dialog is open, nothing behind it moves.
+
+   The pairing dialogs live in <body>, so their backdrop covers the viewport,
+   but the settings modal underneath kept its own scrollbar. Scrolling it slid
+   content out from under the blurred region and left it perfectly readable,
+   which is how the "Delete everything" section could be read beneath a dialog
+   displaying a pairing code. */
+html.dialog-open .modal,
+html.dialog-open body {
+  overflow: hidden;
+}
+
+/* A note under a field that rewrites what you type, so the rewriting reads as
+   help rather than as the field fighting you. Sized and coloured like the
+   other secondary text rather than introducing a third scale. */
+.field-hint {
+  margin: 4px 0 0;
+  font-size: 11.5px;
+  color: var(--text-faint);
+  line-height: 1.5;
+}

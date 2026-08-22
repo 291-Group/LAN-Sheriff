@@ -1,0 +1,12 @@
+# Keep the build context small and free of things that would invalidate the
+# cache or leak into an image.
+.git
+.github
+docs
+*.md
+!README.md
+web/node_modules
+node_modules
+lan-sheriff
+dist
+.DS_Store

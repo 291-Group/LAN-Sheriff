@@ -1,0 +1,27 @@
+{
+  "name": "lan-sheriff-web",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "check:css": "node ../scripts/check-css-vars.mjs"
+  },
+  "dependencies": {
+    "d3-force": "^3.0.0",
+    "d3-geo": "^3.1.1",
+    "preact": "^10.29.8",
+    "topojson-client": "^3.1.0",
+    "world-atlas": "^2.0.2"
+  },
+  "devDependencies": {
+    "@preact/preset-vite": "^2.10.1",
+    "@types/d3-force": "^3.0.10",
+    "@types/d3-geo": "^3.1.1",
+    "@types/topojson-client": "^3.1.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.2.1"
+  }
+}

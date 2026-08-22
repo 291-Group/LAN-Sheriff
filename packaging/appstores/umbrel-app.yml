@@ -1,0 +1,45 @@
+# Umbrel app manifest.
+#
+# Submitted to getumbrel/umbrel-apps as a pull request; this file is the source
+# of truth for what that PR contains.
+manifestVersion: 1
+id: lan-sheriff
+category: networking
+name: LAN Sheriff
+version: "1.0.0"
+tagline: Nothing leaves town unnoticed
+description: >-
+  LAN Sheriff shows you everything your machine and, given the right vantage
+  point, your network are sending out to the internet: where it goes, who owns
+  the other end, and which application is responsible.
+
+
+  It observes only. Nothing is ever blocked, dropped or modified.
+
+
+  Two modes, detected automatically. Deputy Mode needs no privileges and names
+  the application behind every connection. Patrol Mode captures packets and adds
+  DNS visibility and other devices, where it can see them: on a switched network
+  a machine sees its own traffic and broadcast, so seeing the rest means running
+  on the router or on a mirror port. The dashboard says which of these is true
+  for your setup rather than showing an empty screen.
+
+
+  Eight rules look for behaviour worth a second look, and each explains itself
+  in a sentence you can check. All data stays on the device. No account, no
+  cloud, no telemetry.
+developer: 291 Group
+website: https://lansheriff.com
+dependencies: []
+repo: https://github.com/291-Group/LAN-Sheriff
+support: https://github.com/291-Group/LAN-Sheriff/issues
+port: 2911
+gallery:
+  - 1.jpg
+  - 2.jpg
+  - 3.jpg
+path: ""
+defaultUsername: ""
+defaultPassword: ""
+submitter: 291 Group
+submission: https://github.com/291-Group/LAN-Sheriff

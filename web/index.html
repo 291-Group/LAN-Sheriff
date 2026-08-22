@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <!-- Both, not one. This said "dark" while the default theme is light, so the
+         browser painted a dark canvas and dark form controls on the first frame
+         and then flipped, which is the flash the script below exists to stop.
+         Naming both lets the CSS color-scheme property decide per theme. -->
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f4f6fb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#12151c" media="(prefers-color-scheme: dark)" />
+    <!-- SVG first for anything modern; the PNG is the fallback for Safari
+         before 16. The 180 is what iOS uses for a home screen shortcut, and it
+         has to be a PNG: given none, iOS screenshots the page instead. All of
+         them are generated from the same geometry by scripts/mkicons. -->
+    <link rel="icon" type="image/svg+xml" href="/badge.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/icon-32.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/icon-180.png" />
+    <!-- The manifest is what makes the 192 and 512 icons do anything. Without
+         it they were generated, embedded in every binary, and referenced by
+         nothing; with it, a phone can keep the dashboard on its home screen,
+         which is the way most people will actually look at a monitor running on
+         a server in a cupboard.
+
+         **Not declared maskable.** A maskable icon is cropped to a circle
+         inscribed in the canvas, and this badge is a five-pointed star whose
+         points reach the edge on a transparent background, so declaring it
+         would hand Android a star with its points cut off and no background
+         behind them. "any" leaves the launcher to letterbox it, which keeps the
+         shape the product is named after. -->
+    <link rel="manifest" href="/site.webmanifest" />
+    <title>LAN Sheriff</title>
+    <script>
+      // Set before the stylesheet resolves, so the first paint is already the
+      // right theme rather than flashing the other one.
+      try {
+        var t = localStorage.getItem('sheriff-theme')
+        document.documentElement.dataset.theme = t === 'dark' ? 'dark' : 'light'
+      } catch (e) {
+        document.documentElement.dataset.theme = 'light'
+      }
+    </script>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

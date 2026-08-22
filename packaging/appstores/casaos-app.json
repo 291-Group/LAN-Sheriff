@@ -1,0 +1,22 @@
+{
+  "$schema": "https://raw.githubusercontent.com/IceWhaleTech/CasaOS-AppStore/main/schema.json",
+  "name": "lan-sheriff",
+  "title": { "en_us": "LAN Sheriff" },
+  "tagline": { "en_us": "Nothing leaves town unnoticed" },
+  "overview": {
+    "en_us": "Watches every connection leaving this machine, maps where it is headed, names the application responsible, and flags behaviour worth a second look. Observes only: nothing is blocked or modified. All data stays on the device."
+  },
+  "category": "Network",
+  "developer": { "name": "291 Group", "website": "https://lansheriff.com" },
+  "icon": "https://raw.githubusercontent.com/291-Group/LAN-Sheriff/main/web/public/icon-512.png",
+  "index": "/",
+  "port_map": "2911",
+  "scheme": "http",
+  "architectures": ["amd64", "arm64"],
+  "main": "lan-sheriff",
+  "tips": {
+    "custom": {
+      "en_us": "Host networking is required. A container on a bridge sees Docker's own network rather than yours, and the dashboard would come up empty. Patrol Mode also needs a vantage point to see other devices: run this on the router or on a mirror port, otherwise a switch shows only this machine's traffic."
+    }
+  }
+}

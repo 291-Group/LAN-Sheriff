@@ -1,0 +1,398 @@
+name: CI
+
+# **Not for changes CI cannot test.**
+#
+# The release and Docker pipelines are not executed by this workflow, so a push
+# that only edits them gains nothing from a seven-job matrix and costs a full
+# run, two of whose jobs are macOS at ten times the ubuntu rate. Editing a
+# workflow is exactly when that happens repeatedly, since a pipeline is fixed by
+# pushing to it. The same goes for documentation and images.
+#
+# ci.yml itself is deliberately absent from the list: a change to this file does
+# change what CI does, and must be exercised.
+#
+# paths-ignore applies only to push and pull_request. workflow_dispatch always
+# runs, so a full check is one click away when one is wanted.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/docker.yml'
+      - '.github/workflows/codeql.yml'
+      - '.goreleaser.yaml'
+      - 'docs/**'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+  pull_request:
+    paths-ignore:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/docker.yml'
+      - '.github/workflows/codeql.yml'
+      - '.goreleaser.yaml'
+      - 'docs/**'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+  workflow_dispatch:
+
+# Only the newest run of a branch matters, so supersede rather than queue.
+#
+# Without this every push started a full matrix and ran it to completion, which
+# during an afternoon of small commits meant twenty complete runs of thirteen
+# jobs. On a private repository that is billed, and macOS bills at ten times the
+# ubuntu rate, so two macOS jobs per push is the single largest line in the
+# account. Cancelling superseded runs costs no coverage: the run that matters is
+# the one for the commit that is still at the head of the branch.
+#
+# Releases are excluded from cancellation by using the tag in the group, so two
+# tags pushed together do not cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # **macOS is not in the push matrix, and the reason is arithmetic.**
+    #
+    # A private repository bills ubuntu at 1x, windows at 2x and macOS at 10x,
+    # so a six-minute macOS job costs an hour of allowance. Two of them per push
+    # is 120 weighted minutes before any other job is counted, and an afternoon
+    # of small commits exhausted a 2,000 minute month in a single day. Every job
+    # then failed in eleven seconds with a billing message, which looks exactly
+    # like a broken build and is not one.
+    #
+    # What is actually lost is small. Development happens on macOS and the full
+    # gate runs there before every commit, so darwin is the one platform already
+    # covered by hand. Linux and Windows are the ones nobody exercises locally,
+    # which is why they stay on every push. macOS still runs where it matters:
+    # on pull requests, on tags, and on demand.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest", "windows-latest"]' || '["ubuntu-latest", "macos-latest", "windows-latest"]') }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25'
+          cache: true
+
+      # Deputy Mode on darwin needs libproc via cgo; Linux and Windows must stay
+      # cgo-free so a Pi cross-build stays trivial.
+      - name: Set CGO
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "macOS" ]; then
+            echo "CGO_ENABLED=1" >> "$GITHUB_ENV"
+          else
+            echo "CGO_ENABLED=0" >> "$GITHUB_ENV"
+          fi
+
+      - run: go vet ./...
+
+      # Catches dead code, hand-rolled stdlib, and a long tail of small
+      # sloppiness that review tends to miss. Failing the build on it is the
+      # only way it stays true.
+      - name: staticcheck
+        if: runner.os == 'Linux'
+        run: |
+          go install honnef.co/go/tools/cmd/staticcheck@v0.7.0
+          "$(go env GOPATH)/bin/staticcheck" ./...
+
+      # `go get` marks direct dependencies as indirect; tidy fixes it. A dirty
+      # go.mod in a public repo is the first thing a reviewer notices.
+      - name: go.mod is tidy
+        if: runner.os == 'Linux'
+        run: |
+          cp go.mod /tmp/go.mod.bak && cp go.sum /tmp/go.sum.bak
+          go mod tidy
+          diff -u /tmp/go.mod.bak go.mod || { echo "::error::go.mod is not tidy; run 'go mod tidy'"; exit 1; }
+          diff -u /tmp/go.sum.bak go.sum || { echo "::error::go.sum is not tidy; run 'go mod tidy'"; exit 1; }
+
+      - name: gofmt
+        if: runner.os == 'Linux'
+        run: |
+          unformatted="$(gofmt -l internal cmd)"
+          if [ -n "$unformatted" ]; then
+            echo "::error::not gofmt'd:"; echo "$unformatted"; exit 1
+          fi
+      # The race detector requires cgo, and the step above deliberately sets
+      # CGO_ENABLED=0 on Linux to prove the cgo-free path compiles. Those two
+      # facts collided: darwin passed because D6 already forces cgo there, and
+      # linux failed outright.
+      #
+      # Overridden for this step only. The cgo-free constraint is about the
+      # *release artifacts*, it is proved by `go build` above and by the whole
+      # cross-build job, not about how tests are run. Testing without the race
+      # detector on the one platform most people deploy to would be the worse
+      # trade by far.
+      - run: go test -race ./...
+        if: runner.os != 'Windows'
+        env:
+          CGO_ENABLED: 1
+      - run: go test ./...
+        if: runner.os == 'Windows'
+      - run: go build ./...
+
+  # Patrol Mode is compiled only with the `patrol` tag and needs libpcap, so it
+  # gets its own job. Without this, none of the packet-parsing code is ever
+  # exercised in CI.
+  patrol:
+    name: patrol (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    # Same reasoning as the test job: darwin capture is exercised locally on the
+    # development machine every day, so it runs here on pull requests and tags
+    # rather than on every push.
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25'
+          cache: true
+      - name: Install libpcap
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libpcap-dev
+      - name: Build and test with the patrol tag
+        env:
+          CGO_ENABLED: 1
+        run: |
+          go build -tags patrol ./...
+          go vet -tags patrol ./...
+          # The capture tests use synthetic packets, so they need no privilege.
+          go test -tags patrol ./...
+
+  # A tag-less (Deputy-only) build must always work everywhere, and must never
+  # need libpcap. This is the guarantee that Patrol Mode stays optional.
+  cross-build:
+    name: cross-build (cgo-free)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          go-version: '1.25'
+          cache: true
+
+      # Every cgo-free target the release actually ships, **read out of
+      # .goreleaser.yaml** rather than listed again here.
+      #
+      # This used to be a hand-written matrix of five, and it did not include
+      # FreeBSD, which the portable build has shipped all along. So nothing ever
+      # compiled it, and it did not compile: two files carried a `darwin ||
+      # freebsd || netbsd || openbsd` constraint under a `_darwin.go` filename,
+      # and Go ANDs the implicit constraint from that suffix with the explicit
+      # one, so the BSD half of the tag was dead text. The first time anyone
+      # would have found out was a release build failing after the tag was
+      # pushed.
+      #
+      # A second list of platforms is a list that drifts from the first. This
+      # one cannot: if a target is added to the release, it is built here on the
+      # next push, and if it does not compile this job is what says so.
+      #
+      # One job rather than a job per target, because the setup dominates: seven
+      # go builds against a warm cache cost less than seven runners starting up.
+      - name: Build every target the release ships
+        run: |
+          set -euo pipefail
+          # The runner image ships PyYAML, but this job is the only thing
+          # standing between a broken target and a failed release, so it does
+          # not get to be skipped over a missing module.
+          python3 -c 'import yaml' 2>/dev/null || pip install --quiet pyyaml
+          python3 - <<'EOF' > /tmp/targets
+          import yaml, itertools
+          d = yaml.safe_load(open('.goreleaser.yaml'))
+          for b in d['builds']:
+              if 'CGO_ENABLED=0' not in (b.get('env') or []):
+                  continue  # the capture builds need a real toolchain, not this job
+              ignore = {(i.get('goos'), i.get('goarch')) for i in (b.get('ignore') or [])}
+              for goos, goarch in itertools.product(b['goos'], b['goarch']):
+                  if (goos, goarch) not in ignore:
+                      print(goos, goarch)
+          EOF
+          test -s /tmp/targets || { echo "::error::no cgo-free targets found in .goreleaser.yaml"; exit 1; }
+
+          fail=0
+          while read -r goos goarch; do
+            echo "::group::$goos/$goarch"
+            if CGO_ENABLED=0 GOOS="$goos" GOARCH="$goarch" go build -o /dev/null ./cmd/...; then
+              echo "$goos/$goarch ok"
+            else
+              echo "::error::$goos/$goarch does not build, and the release ships it"
+              fail=1
+            fi
+            echo "::endgroup::"
+          done < /tmp/targets
+          exit $fail
+
+      # The release configuration, validated on every push rather than for the
+      # first time during a release.
+      #
+      # This is here because it was not, and `goreleaser check` failed the moment
+      # it was run: `brews` had been deprecated in favour of `homebrew_casks`.
+      # The release workflow pins the action as `~> v2`, which floats, so the
+      # goreleaser that builds v1.0.0 is not the one any of this was written
+      # against, and a deprecated key becomes a broken release on somebody
+      # else's release schedule rather than ours.
+      #
+      # The same action as the release uses, so the version doing the checking is
+      # the version that will do the building.
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: '~> v2'
+          args: check
+
+      # The binary is the other thing a person downloads, and it only ever grows
+      # unless something is watching. Measured on one target rather than all of
+      # them: the point is to notice a dependency that doubles the artifact, and
+      # that shows up everywhere at once.
+      - name: Binary size
+        env:
+          CGO_ENABLED: 0
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          go build -ldflags "-s -w" -o /tmp/lan-sheriff ./cmd/lan-sheriff
+          size=$(wc -c < /tmp/lan-sheriff)
+          echo "Binary: $((size / 1024 / 1024)) MB"
+          # Generous on purpose: the embedded country database is several MB of
+          # it and the dashboard another one or two. This catches a dependency
+          # that doubles the artifact, not ordinary growth.
+          if [ "$size" -gt $((45 * 1024 * 1024)) ]; then
+            echo "::error::binary is $((size / 1024 / 1024)) MB, over the 45 MB budget"
+            exit 1
+          fi
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - name: Type-check
+        run: npx tsc --noEmit
+        working-directory: web
+
+      - run: npm run build
+        working-directory: web
+      - name: Report bundle size
+        # Relative to the repository root, not to the previous step's directory.
+        # `../internal/web` resolved outside the checkout entirely and the job
+        # failed before running a line of it.
+        working-directory: internal/web
+        run: |
+          # What matters is what a reader downloads, not the sum of every asset
+          # emitted. Translation catalogues are split per language and fetched
+          # only when chosen, so summing all of them would report a payload
+          # nobody ever receives, and would have failed the gate precisely
+          # because the loading was made better.
+          entry=$(ls -S dist/assets/index-*.js | head -1)
+          css=$(ls dist/assets/*.css | head -1)
+          initial=$( { gzip -c "$entry"; gzip -c "$css"; } | wc -c )
+          # The largest language chunk, since that is the worst case a reader
+          # adds on top of the initial payload.
+          worst_lang=$(for f in dist/assets/*.js; do
+            case "$(basename "$f")" in index-*) continue;; esac
+            gzip -c "$f" | wc -c
+          done | sort -n | tail -1)
+          worst=$((initial + ${worst_lang:-0}))
+
+          echo "Initial payload: $((initial / 1024)) KB gzipped"
+          echo "Worst case (with a translation): $((worst / 1024)) KB gzipped"
+          {
+            echo "### Bundle"
+            echo "- Initial: $((initial / 1024)) KB gzipped"
+            echo "- Worst case with a translation: $((worst / 1024)) KB gzipped"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # A hard gate. A budget that only warns is a number nobody defends:
+          # it is exceeded once, the warning scrolls past, and the budget has
+          # quietly become a description rather than a limit.
+          #
+          # The budget applies to what a reader actually downloads. Raising it is
+          # a deliberate act, edit this line, and say why in the commit.
+          budget=$((150 * 1024))
+          if [ "$worst" -gt "$budget" ]; then
+            echo "::error::worst-case payload $((worst / 1024)) KB exceeds the $((budget / 1024)) KB budget"
+            exit 1
+          fi
+          echo "Within budget: $((worst / 1024)) KB of $((budget / 1024)) KB"
+
+
+  # Checks that no compiler enforces, each added after a defect that shipped
+  # past review. They need only node, so they run as their own fast job, a
+  # check that is not wired into CI does not run, which is how the first three
+  # of these were found by hand rather than by the build.
+  hygiene:
+    name: hygiene
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+
+      # An undefined CSS custom property with no fallback invalidates the whole
+      # declaration, silently removing layout. This once deleted every gap in
+      # the Roster with no error anywhere.
+      - name: CSS variables all resolve
+        run: node scripts/check-css-vars.mjs
+
+      # TypeScript guarantees every catalogue has every key. It cannot see a key
+      # that is present and wrong, a Hebrew string reading "טלמetriה" renders
+      # and type-checks perfectly.
+      - name: Translation catalogues are not mixed-script
+        run: node scripts/check-i18n.mjs
+
+      # The codes are Go constants on one side and object keys on the other, so
+      # nothing else in the build compares them. A code with no translation
+      # falls back to English prose, which is invisible to a developer who
+      # reads English and wrong only for the eleven audiences least able to
+      # report it.
+      - name: Backend message codes all have translations
+        run: node scripts/check-msg-codes.mjs
+
+  # A security tool that ships known-vulnerable dependencies has a credibility
+  # problem before it has a technical one. This job exists because a local audit
+  # found twelve standard-library advisories affecting the build, all fixed by
+  # a newer toolchain, none visible without running this.
+  security:
+    name: security
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
+        with:
+          # Deliberately unpinned within the minor version: the point of this
+          # job is to build with the newest patch release, which is where
+          # standard-library fixes land.
+          go-version: '1.25'
+
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@v1.7.0
+          govulncheck ./...
+
+      # The frame decoder is the only parser in the product fed by bytes an
+      # unknown machine put on a socket. It is fast to fuzz, so it runs on every
+      # push rather than nightly.
+      - name: Fuzz the Dispatch frame decoder
+        run: go test ./internal/dispatch/ -run XXX -fuzz FuzzReadFrame -fuzztime 60s

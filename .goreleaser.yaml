@@ -1,0 +1,496 @@
+# Release builds for LAN Sheriff.
+#
+# The governing rule: **a downloaded binary must never tell a user to
+# rebuild it.** Patrol Mode needs packet capture, packet capture needs cgo, and
+# cgo needs a real toolchain per platform, so the release cannot be one
+# cross-compiled artifact. That is the entire reason this file is more
+# complicated than a Go release usually is.
+#
+# What a user should ever need is *privilege*, never a compiler. The capability
+# banner already distinguishes the two: a build without capture says "rebuild",
+# a build with capture says "grant privilege". Only the second may reach anyone
+# who downloaded a release.
+#
+# Three build groups, and each exists for a stated reason:
+#
+#   patrol-*    capture compiled in. What people download.
+#   portable    cgo-free, no capture. For `go install`, unusual platforms, and
+#               anyone who would rather not have libpcap in their process.
+#
+# Anything cgo is built on a runner of that operating system; nothing here
+# pretends to cross-compile a C dependency.
+
+version: 2
+
+project_name: lan-sheriff
+
+env:
+  # The build number, defaulted so that running goreleaser without it set fails
+  # to nothing rather than failing to build. CI exports the real count.
+  - BUILD_NUMBER={{ if index .Env "BUILD_NUMBER" }}{{ .Env.BUILD_NUMBER }}{{ else }}0{{ end }}
+
+before:
+  hooks:
+    # The dashboard is embedded, so it must exist before any binary is built.
+    - go mod download
+    - make web
+    # The country and ASN databases are embedded too, so a release paints the map
+    # offline on first run rather than waiting on a download. They are published
+    # monthly and deliberately not committed, so each release build vendors them.
+    - make datasets
+
+builds:
+  # ── Linux, with capture ────────────────────────────────────────────────────
+  # libpcap is linked statically so the binary works in a minimal
+  # container and on a distribution whose libpcap is older than the build host's.
+  # A dynamically linked release would fail at start on exactly the machines
+  # least able to diagnose it.
+  - id: patrol-linux
+    main: ./cmd/lan-sheriff
+    binary: lan-sheriff
+    env:
+      - CGO_ENABLED=1
+      # The archive by absolute path, not -lpcap. gopacket declares its own
+      # `#cgo LDFLAGS: -lpcap`, and the linker resolves that to the shared
+      # object whenever one exists, so -Wl,-Bstatic never took effect: the
+      # build succeeded and produced a binary that still needed libpcap
+      # installed on the target. It was configured that way for months and
+      # nobody found out, because this pipeline had never been run.
+      #
+      # The workflow builds libpcap from source with the dbus, bluetooth and
+      # usb backends disabled, because Debian's own archive cannot be linked
+      # statically without them.
+      - CGO_LDFLAGS=/usr/local/lib/libpcap.a
+    # **arm64 needs a different compiler and a different libpcap.**
+    #
+    # cgo builds with whatever C compiler it is handed, and the runner's gcc
+    # only emits x86. The second release rehearsal failed exactly here, feeding
+    # AArch64 assembly to an x86 assembler, after amd64 had built perfectly
+    # beside it. A hosted arm64 runner would make all of this unnecessary, and
+    # GitHub does not offer them for a private repository on a free plan.
+    #
+    # The archive path differs too, and must. Pointing both architectures at
+    # the same libpcap.a links an x86 archive into an arm64 binary, which at
+    # best fails loudly and at worst produces something that will not start on
+    # the Raspberry Pi this build exists to serve.
+    overrides:
+      - goos: linux
+        goarch: arm64
+        env:
+          - CGO_ENABLED=1
+          - CC=aarch64-linux-gnu-gcc
+          # An override replaces the whole env list for this target, so every
+          # variable the build needs has to be restated here, not just the ones
+          # that differ.
+          - CGO_CFLAGS={{ .Env.LIBPCAP_ARM64_CFLAGS }}
+          - CGO_LDFLAGS={{ .Env.LIBPCAP_ARM64 }}
+    goos: [linux]
+    goarch: [amd64, arm64]
+    flags: [-tags=patrol]
+    ldflags:
+      - -s -w
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Version={{.Version}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Commit={{.Commit}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.BuildDate={{.Date}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Build={{.Env.BUILD_NUMBER}}
+
+  # ── macOS, with capture ────────────────────────────────────────────────────
+  # Built on a macOS runner. libpcap ships with the system, so it is linked
+  # dynamically against the SDK, there is no static option worth taking here.
+  - id: patrol-darwin
+    main: ./cmd/lan-sheriff
+    binary: lan-sheriff
+    env:
+      - CGO_ENABLED=1
+    goos: [darwin]
+    goarch: [amd64, arm64]
+    flags: [-tags=patrol]
+    ldflags:
+      - -s -w
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Version={{.Version}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Commit={{.Commit}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.BuildDate={{.Date}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Build={{.Env.BUILD_NUMBER}}
+
+  # ── Windows, with capture ──────────────────────────────────────────────────
+  # Npcap is **delay-loaded**. Linked at load time, LAN Sheriff would
+  # refuse to start at all on a machine without Npcap installed, which is most
+  # of them. Delay loading means it starts, reports Patrol Mode unavailable, and
+  # says Npcap is what is missing. A monitor that will not launch teaches the
+  # user nothing.
+  - id: patrol-windows
+    main: ./cmd/lan-sheriff
+    binary: lan-sheriff
+    env:
+      - CGO_ENABLED=1
+    goos: [windows]
+    goarch: [amd64]
+    flags: [-tags=patrol]
+    ldflags:
+      - -s -w
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Version={{.Version}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Commit={{.Commit}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.BuildDate={{.Date}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Build={{.Env.BUILD_NUMBER}}
+      # **Inert, and kept deliberately.**
+      #
+      # The delay-load design assumed wpcap.dll was linked at load time, so a machine without
+      # Npcap would fail to start. Reading the released binary with Go's PE
+      # reader shows it imports nothing but kernel32.dll: gopacket's Windows
+      # path is pure syscall and loads wpcap at runtime, so there is no import
+      # for this to delay, and there never was.
+      #
+      # The protection is real and comes from the library. LoadWinPCAP returns a
+      # plain error when the DLL is absent, package init discards it, and the
+      # process starts and reports Deputy Mode.
+      #
+      # Kept as insurance in case gopacket ever moves to a static import, and
+      # documented rather than removed silently, because a flag that looks like
+      # a safeguard while doing nothing is worse than no flag.
+      - -extldflags '-Wl,--delayload=wpcap.dll'
+
+  # ── Portable, no capture ───────────────────────────────────────────────────
+  # Kept deliberately. Cross-compiles anywhere, needs no C toolchain,
+  # and covers the platforms the cgo builds do not reach. Deputy Mode is fully
+  # functional here, this is not a crippled build, it is the one that cannot
+  # see other devices' traffic.
+  - id: portable
+    main: ./cmd/lan-sheriff
+    binary: lan-sheriff
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, windows, freebsd]
+    goarch: [amd64, arm64, arm]
+    goarm: ['7']
+    ignore:
+      # arm is a 32-bit Linux target; the others have no meaningful users.
+      - goos: windows
+        goarch: arm
+      - goos: freebsd
+        goarch: arm
+    ldflags:
+      - -s -w
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Version={{.Version}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Commit={{.Commit}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.BuildDate={{.Date}}
+      - -X github.com/291-Group/LAN-Sheriff/internal/cli.Build={{.Env.BUILD_NUMBER}}
+
+archives:
+  # The capture builds are what a person downloads, so they get the plain name.
+  - id: default
+    ids: [patrol-linux, patrol-darwin, patrol-windows]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+      - SECURITY.md
+
+  # The portable build is marked as such, so nobody downloads it by accident and
+  # then wonders why Patrol Mode is missing.
+  - id: portable
+    ids: [portable]
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}_portable
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+
+# ── Linux packages ───────────────────────────────────────────────────
+# Only the capture builds are packaged. Somebody installing from apt or dnf
+# expects the whole program; a .deb of the portable build would install quietly
+# and then tell them to rebuild it, which breaks that rule by another route.
+nfpms:
+  - id: packages
+    ids: [patrol-linux]
+    package_name: lan-sheriff
+    vendor: 291 Group
+    homepage: https://lansheriff.com
+    maintainer: 291 Group <info@291group.com>
+    description: |
+      Self-hosted network monitor.
+      Watches every connection leaving this machine, maps where it is headed,
+      names the application responsible, and flags behaviour worth a second
+      look. Observes only; it never blocks or modifies traffic.
+    license: AGPL-3.0-or-later
+    section: net
+    formats: [deb, rpm, apk]
+
+    # libpcap is linked statically into the binary, so there is no runtime
+    # dependency on it. That is the point of the static link: a package that
+    # pulled in libpcap would still work, but the tarball beside it would not,
+    # and the two should behave the same way.
+    contents:
+      - src: packaging/systemd/lan-sheriff.service
+        dst: /usr/lib/systemd/system/lan-sheriff.service
+        file_info: { mode: 0644 }
+      - src: packaging/openrc/lan-sheriff
+        dst: /etc/init.d/lan-sheriff
+        packager: apk
+        file_info: { mode: 0755 }
+      - src: README.md
+        dst: /usr/share/doc/lan-sheriff/README.md
+        file_info: { mode: 0644 }
+      - src: docs/VANTAGE-POINTS.md
+        dst: /usr/share/doc/lan-sheriff/VANTAGE-POINTS.md
+        file_info: { mode: 0644 }
+      - dst: /var/lib/lan-sheriff
+        type: dir
+        file_info: { mode: 0700, owner: lan-sheriff, group: lan-sheriff }
+
+    scripts:
+      postinstall: packaging/scripts/postinstall.sh
+      preremove: packaging/scripts/preremove.sh
+      postremove: packaging/scripts/postremove.sh
+
+    # The database is not config and not owned by the package, so nothing here
+    # marks it for removal. postremove prints where it is instead.
+    rpm:
+      group: Applications/Internet
+    deb:
+      predepends: [adduser]
+
+# ── Homebrew ─────────────────────────────────────────────────────────
+# Generated from the release rather than maintained by hand, so the formula's
+# version and checksums cannot drift from the artifacts they describe. That
+# drift is the usual way a tap breaks: somebody ships a release and forgets the
+# formula, and `brew install` fetches a tarball whose checksum no longer matches.
+# GoReleaser deprecated `brews` in favour of `homebrew_casks`, and `goreleaser
+# check` fails on the old key. That matters more than a lint warning here: the
+# release workflow pins goreleaser as `~> v2`, which floats, so the version that
+# builds v1.0.0 is not the version this was written against. A deprecated key is
+# a release that breaks on somebody else's schedule.
+#
+# The migration is not purely mechanical. A cask is macOS only, so Homebrew on
+# Linux no longer gets this, which is an acceptable loss: Linux has the .deb,
+# the .rpm, the .apk, the AUR package and install.sh, and Linuxbrew was the
+# least likely of the six. A cask also has no `test` block, so the assertion
+# that the version ldflags took has moved to the release workflow, where it now
+# runs against the actual artifact rather than in a formula nobody executes
+# until somebody installs it.
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTHING BELOW THIS LINE CURRENTLY RUNS.
+#
+# The release is assembled by scripts/release/assemble.sh, not by
+# `goreleaser release`, because the open-source edition cannot package binaries
+# it did not build and the capture builds must each be built on their own
+# operating system.
+#
+# That means the cask, the Scoop manifest, the AUR package and the .deb/.rpm/.apk
+# are configured and **not produced**. The configuration is kept rather than
+# deleted because it is correct and reviewed, and because wiring each channel
+# back up is a known piece of work rather than a rewrite:
+#
+#   nfpm packages   DONE. packaging/nfpm.yaml, built by assemble.sh, verified
+#                   locally: the .deb carries the binary, the systemd unit and
+#                   the docs, with correct control metadata
+#   cask / scoop    both are a templated file plus a commit to another repo,
+#                   which needs the checksums assemble.sh already computes
+#   aur             the same, over ssh
+#
+# Until then Linux, macOS and Windows are served by install.sh and the archives,
+# which are the paths install instructions in the README actually use.
+# ─────────────────────────────────────────────────────────────────────────────
+
+homebrew_casks:
+  - name: lan-sheriff
+    # Only the capture builds. Homebrew users on macOS expect Patrol Mode to be
+    # there; the portable build would install silently and then tell them to
+    # rebuild, which breaks that rule by another route.
+    ids: [default]
+    binaries: [lan-sheriff]
+    repository:
+      owner: 291-Group
+      name: homebrew-tap
+      # A token with write access to the tap, not the default GITHUB_TOKEN,
+      # which is scoped to this repository only.
+      token: "{{ .Env.HOMEBREW_TAP_TOKEN }}"
+    directory: Casks
+    homepage: "https://lansheriff.com"
+    description: "Self-hosted network monitor: watch what leaves, map where it goes, flag what does not belong"
+    license: "AGPL-3.0-or-later"
+    # Homebrew installs unprivileged, which is exactly right for Deputy Mode and
+    # exactly wrong for capture, so say so at install time rather than letting
+    # somebody discover it from a banner.
+    caveats: |
+      Start it with:
+        lan-sheriff
+
+      Deputy Mode needs no privileges and works immediately: it names the
+      application behind every connection this machine makes.
+
+      Patrol Mode sees other devices and DNS, and needs access to the BPF
+      devices, which in practice means:
+        sudo lan-sheriff
+
+      Seeing other devices also needs a vantage point. A machine plugged into a
+      switch sees its own traffic and broadcast, and nothing else:
+        https://github.com/291-Group/LAN-Sheriff/blob/main/docs/VANTAGE-POINTS.md
+    hooks:
+      post:
+        # Strip the quarantine attribute macOS puts on anything downloaded.
+        #
+        # The release is not notarized by Apple, so without this the first run
+        # is refused by Gatekeeper with a dialog that says the binary is damaged.
+        # It is not damaged, it is unsigned, and a user who has just installed
+        # from a tap they added on purpose has already made that decision.
+        install: |
+          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
+            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/lan-sheriff"]
+          end
+    # Uninstalling leaves the database alone, matching uninstall.sh. A monitor
+    # that erases months of history because somebody changed how it was
+    # installed would be a poor neighbour; `zap` is where Homebrew puts the
+    # opt-in deletion, reached with `brew uninstall --zap`.
+    zap:
+      trash:
+        - "~/Library/Application Support/lan-sheriff"
+
+checksum:
+  name_template: checksums.txt
+
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+changelog:
+  use: github
+  sort: asc
+  # **No groups, and no conventional-commit filters, because this project does
+  # not write conventional commits.**
+  #
+  # The previous configuration sorted into Features, Fixes and Other by matching
+  # `feat:` and `fix:` prefixes. Checked against the last twenty-five commits:
+  # zero matched either pattern, so every entry would have appeared under a
+  # heading called "Other", which is worse than presenting them plainly. The
+  # exclude patterns for `docs:` and `chore:` never matched anything either.
+  #
+  # Subjects here are sentences that say what changed and usually why. A flat
+  # chronological list of them reads better than any grouping that could be
+  # imposed on top, and it cannot silently drop a commit the way a filter can.
+  filters:
+    exclude:
+      # Merge commits carry no information a reader wants.
+      - '^Merge '
+
+# ── Scoop, for Windows ───────────────────────────────────────────────
+scoops:
+  - repository:
+      owner: 291-Group
+      name: scoop-bucket
+      token: "{{ .Env.SCOOP_BUCKET_TOKEN }}"
+    homepage: "https://lansheriff.com"
+    description: "Self-hosted network monitor: watch what leaves, map where it goes, flag what does not belong"
+    license: AGPL-3.0-or-later
+    # Npcap is not bundled and cannot be: it is Npcap's to distribute, and its
+    # licence does not permit redistribution. The binary is delay-loaded against
+    # it so it starts and explains itself rather than refusing to launch,
+    # which is why this is a note and not a dependency.
+    post_install:
+      - "Write-Host 'Deputy Mode works now and needs no privileges.'"
+      - "Write-Host 'Patrol Mode needs Npcap (https://npcap.com) and an Administrator prompt.'"
+      - "Write-Host 'Without Npcap it still runs, in Deputy Mode, and says so.'"
+
+# ── AUR, for Arch ────────────────────────────────────────────────────
+# The -bin package: it installs the released binary rather than building from
+# source. An AUR package that compiled this would need libpcap headers and a Go
+# toolchain on every user's machine to produce the same binary they could have
+# downloaded, and the release already links libpcap statically.
+aurs:
+  - name: lan-sheriff-bin
+    homepage: "https://lansheriff.com"
+    description: "Self-hosted network monitor: watch what leaves, map where it goes, flag what does not belong"
+    license: AGPL-3.0-or-later
+    maintainers:
+      - "291 Group <info@291group.com>"
+    private_key: "{{ .Env.AUR_SSH_KEY }}"
+    git_url: "ssh://aur@aur.archlinux.org/lan-sheriff-bin.git"
+    provides: [lan-sheriff]
+    conflicts: [lan-sheriff]
+    # No libpcap dependency: it is inside the binary.
+    depends: []
+    package: |-
+      install -Dm755 "./lan-sheriff" "${pkgdir}/usr/bin/lan-sheriff"
+      install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/lan-sheriff-bin/LICENSE"
+      install -Dm644 "./README.md" "${pkgdir}/usr/share/doc/lan-sheriff-bin/README.md"
+
+# ── Provenance ───────────────────────────────────────────────────────
+# A checksums file proves the archives were not corrupted in transit. It proves
+# nothing about who produced them: anybody who can replace the archives can
+# replace checksums.txt beside them.
+#
+# Signing it closes that. Keyless, through sigstore, so there is no private key
+# for this project to hold, lose or leak: the signature is bound to the GitHub
+# Actions identity that built the release and recorded in a public transparency
+# log. Anybody can check it without trusting us:
+#
+#   cosign verify-blob checksums.txt \
+#     --signature checksums.txt.sig --certificate checksums.txt.pem \
+#     --certificate-identity-regexp 'https://github.com/291-Group/LAN-Sheriff' \
+#     --certificate-oidc-issuer https://token.actions.githubusercontent.com
+signs:
+  - cmd: cosign
+    certificate: '${artifact}.pem'
+    args:
+      - sign-blob
+      - '--output-certificate=${certificate}'
+      - '--output-signature=${signature}'
+      - '${artifact}'
+      - '--yes'
+    artifacts: checksum
+    output: true
+
+# What went into the binaries, in a format a scanner can read. For a tool that
+# tells people what their network is doing, refusing to say what is inside it
+# would be an odd position to hold.
+sboms:
+  - artifacts: archive
+
+release:
+  draft: true
+  prerelease: auto
+  header: |
+    ## LAN Sheriff {{ .Tag }}
+
+    **Nothing leaves town unnoticed.**
+
+    Download the archive for your platform, unpack it, and run `lan-sheriff`.
+    No configuration, no account, and no elevated privileges for Deputy Mode.
+
+    Patrol Mode (which sees every device rather than only this machine) is
+    compiled in. It needs privilege, not a rebuild; the dashboard tells you the
+    exact command for your system if it is unavailable.
+  footer: |
+    ---
+
+    ### Checking what you downloaded
+
+    Every archive is listed in `checksums.txt`, and that file is signed. The
+    signature is keyless: it is bound to the GitHub Actions run that built this
+    release and recorded in a public transparency log, so verifying it requires
+    trusting sigstore rather than trusting us.
+
+    ```sh
+    cosign verify-blob checksums.txt \
+      --signature checksums.txt.sig \
+      --certificate checksums.txt.pem \
+      --certificate-identity-regexp 'https://github.com/291-Group/LAN-Sheriff' \
+      --certificate-oidc-issuer https://token.actions.githubusercontent.com
+
+    sha256sum -c checksums.txt --ignore-missing
+    ```
+
+    `install.sh` does the checksum half of this for you and refuses to install
+    without it.
+
+    ---
+    **`_portable` archives** are built without packet capture. They run
+    anywhere and offer Deputy Mode only. Use one if the standard build will not
+    start, or if you would rather not have a capture library in the process.

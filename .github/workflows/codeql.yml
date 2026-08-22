@@ -1,0 +1,81 @@
+name: CodeQL
+
+# Static analysis, on the two languages this repository actually contains.
+#
+# Worth having on a tool that asks people to run it with packet capture
+# privileges on their own network: "trust us" is not an argument, and a Security
+# tab with a green result is at least a checkable one.
+#
+# Scheduled as well as on push, because an advisory that lands on Wednesday
+# should not wait for somebody to commit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Thursday, early. Not midnight: everybody schedules midnight, and the
+    # queues show it.
+    - cron: "17 6 * * 4"
+  workflow_dispatch:
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze ${{ matrix.language }}
+    # **Off until the repository is public.**
+    #
+    # Code scanning is free on public repositories and requires GitHub Advanced
+    # Security on private ones. Without it the analysis runs to completion, takes
+    # a couple of minutes, and then fails at the upload with "Advanced Security
+    # must be enabled" - a red X on every push, for a reason that is a billing
+    # state rather than anything wrong with the code.
+    #
+    # A variable rather than a visibility check, because the payload that would
+    # carry visibility is not populated the same way for a scheduled run as for a
+    # push, and a weekly scan that silently stops running is worse than one that
+    # was never switched on. Set CODE_SCANNING to true on the public repository
+    # and this starts working with no other change.
+    if: vars.CODE_SCANNING == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      packages: read
+      actions: read
+      contents: read
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: go
+            build-mode: autobuild
+          - language: javascript-typescript
+            build-mode: none
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # The toolchain floor is in go.mod, and autobuild honours it. Named here
+      # anyway so a CodeQL run cannot quietly analyse a build produced by an
+      # older compiler than the one the release uses.
+      - if: matrix.language == 'go'
+        uses: actions/setup-go@v7
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+          queries: security-and-quality
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: /language:${{ matrix.language }}

@@ -1,0 +1,72 @@
+# LAN Sheriff.
+#
+#   docker compose up -d
+#   open http://localhost:2911
+#
+# Three settings below are not defaults and not optional. Each is explained
+# where it appears, because a network monitor that is misconfigured does not
+# fail loudly: it comes up, looks healthy, and shows you almost nothing.
+
+services:
+  lan-sheriff:
+    image: ghcr.io/291-group/lan-sheriff:latest
+    # Or build it yourself:
+    # build: .
+    container_name: lan-sheriff
+    restart: unless-stopped
+
+    # **Host networking, and this is the whole point.**
+    #
+    # A container on the default bridge has its own virtual interface, so
+    # capture sees Docker's private network and the host's traffic is somewhere
+    # else entirely. The dashboard would come up, the Roster would list nothing
+    # but other containers, and the map would stay empty. That is the
+    # vantage-point problem from docs/VANTAGE-POINTS.md, arrived at through
+    # container networking rather than through a switch.
+    #
+    # On Linux this works as written. On Docker Desktop for macOS and Windows
+    # the container runs inside a Linux VM, so "host" is that VM and not your
+    # laptop: you will see the VM's network. Run the binary directly on those
+    # platforms; the image is for Linux hosts, which is where a monitor that
+    # runs continuously usually lives anyway.
+    network_mode: host
+
+    # Packet capture needs these two, and only these two. `privileged: true`
+    # would also work and is what most examples reach for; it hands the
+    # container the whole kernel, which is a poor trade for a program whose
+    # entire purpose is to watch carefully.
+    # Everything off, then the two that packet capture needs back on. This is
+    # what makes running as root inside the container reasonable: the process
+    # has the network capabilities and nothing else, not even the ability to
+    # change file ownership or load a module.
+    #
+    # Remove these two and it still starts, in Deputy Mode, and tells you what
+    # you would gain. Nothing here fails silently.
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_RAW
+      - NET_ADMIN
+
+    # The database is the record of your network. A named volume keeps it
+    # across `docker compose down`, which an anonymous volume would not.
+    volumes:
+      - lan-sheriff-data:/data
+
+    environment:
+      # Everything else is discovered. This is here so the path is visible
+      # rather than implied by the image.
+      - LAN_SHERIFF_DATA_DIR=/data
+
+    # Reports unhealthy if the API stops answering, which is what a supervisor
+    # should restart on. It deliberately does not call an endpoint that needs a
+    # password, so the check keeps working once one is set.
+    healthcheck:
+      test: ["CMD", "lan-sheriff", "status", "--data-dir", "/data"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  lan-sheriff-data:

@@ -1,0 +1,614 @@
+name: Release
+
+# Building a release is not one job, and the reason is a rule: a downloaded
+# binary must never tell a user to rebuild it. Patrol Mode needs packet capture,
+# capture needs cgo, and cgo needs a real toolchain for the target platform, so
+# each operating system is built on a runner of that operating system.
+#
+# GoReleaser's own split-and-merge is a paid feature, so the shape here is the
+# ordinary open-source one: each OS builds its own artifacts, uploads them, and a
+# final job assembles the release from what the others produced.
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+# Only the newest run of a branch matters, so supersede rather than queue.
+#
+# Without this every push started a full matrix and ran it to completion, which
+# during an afternoon of small commits meant twenty complete runs of thirteen
+# jobs. On a private repository that is billed, and macOS bills at ten times the
+# ubuntu rate, so two macOS jobs per push is the single largest line in the
+# account. Cancelling superseded runs costs no coverage: the run that matters is
+# the one for the commit that is still at the head of the branch.
+#
+# Releases are excluded from cancellation by using the tag in the group, so two
+# tags pushed together do not cancel each other.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+  # Keyless signing exchanges this for a short-lived sigstore certificate, so
+  # the release carries no long-lived key and this project holds no secret to
+  # lose. Without it the signing step fails rather than silently skipping.
+  id-token: write
+
+jobs:
+  # Capture builds, one runner per operating system. Nothing here cross-compiles
+  # a C dependency.
+  build:
+    name: build (${{ matrix.os }})
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: linux, runner: ubuntu-latest, id: patrol-linux }
+          - { os: darwin, runner: macos-latest, id: patrol-darwin }
+          - { os: windows, runner: windows-latest, id: patrol-windows }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # goreleaser needs history for the changelog
+
+      # The build number, from the commit count. `shell: bash` because this job
+      # also runs on Windows, where the default shell is PowerShell.
+      #
+      # The shallow check is the point: on a truncated clone `rev-list --count`
+      # still succeeds and still prints a number, just a much smaller one, so a
+      # release would carry a build number lower than the one before it and
+      # nothing would report an error.
+      - name: Build number
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+            echo "::error::shallow clone: the commit count would be wrong"; exit 1
+          fi
+          # Base plus commits here. BUILD_BASE is zero in the repository the
+          # work was done in and set once in the public one, so a fresh history
+          # continues the count rather than restarting it. See the Makefile.
+          base=$(cat BUILD_BASE 2>/dev/null || echo 0)
+          echo "BUILD_NUMBER=$(( base + $(git rev-list --count HEAD) ))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-go@v7
+        with:
+          # Unpinned within the minor version so the release picks up standard
+          # library fixes, and the security job runs govulncheck on every push so this
+          # is a checked property rather than a hope.
+          go-version: '1.25'
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '20'
+
+      # The dashboard is embedded in the binary, so it is built before anything
+      # else and identically on every runner.
+      - name: Build the dashboard
+        run: make web
+
+      # libpcap, built rather than installed, and statically linked into the
+      # Linux artifacts so a downloaded binary runs on a machine that
+      # has never heard of libpcap.
+      #
+      # The distribution package cannot do this. Its libpcap.a is compiled with
+      # the D-Bus, Bluetooth and USB backends, so a static link fails on
+      # undefined dbus symbols and the linker silently falls back to the shared
+      # object. Verified after the build below rather than assumed.
+      - name: libpcap, static, without the optional backends (Linux)
+        if: matrix.os == 'linux'
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y build-essential flex bison
+          # **Built outside the checkout.** Unpacking here left libpcap-1.10.5/
+          # and its tarball untracked in the working tree, and goreleaser refuses
+          # to build from a dirty tree because a dirty tree means the artifact
+          # does not correspond to the commit it claims. Both capture jobs failed
+          # this way on the first rehearsal, before compiling a single line.
+          #
+          # **Twice, because arm64 cannot be cross-compiled with the host gcc.**
+          # The second rehearsal got past the dirty tree and then died feeding
+          # AArch64 assembly to an x86 assembler: "no such instruction: stp
+          # x29,x30". cgo uses the C compiler it is given, and the runner's gcc
+          # only speaks x86. A hosted arm64 runner would avoid all of this, and
+          # they are not available for a private repository on a free plan, so
+          # the cross toolchain it is.
+          #
+          # arm64 matters more than it looks: the Raspberry Pi is the machine
+          # this product is most obviously *for*, and without this build a Pi
+          # user gets the portable binary and no packet capture at all.
+          sudo apt-get install -y gcc-aarch64-linux-gnu
+          cd "$RUNNER_TEMP"
+          wget -q https://www.tcpdump.org/release/libpcap-1.10.5.tar.gz
+
+          # Native, for amd64, installed where CGO_LDFLAGS already points.
+          tar xzf libpcap-1.10.5.tar.gz
+          mv libpcap-1.10.5 libpcap-amd64
+          (
+            cd libpcap-amd64
+            ./configure --disable-dbus --disable-bluetooth --disable-usb \
+                        --disable-rdma --disable-shared --without-libnl
+            make -j"$(nproc)"
+            sudo make install
+          )
+
+          # Cross, for arm64. A separate prefix so the two static archives
+          # cannot be confused for one another, which would produce a binary
+          # that links and then refuses to start on the wrong architecture.
+          tar xzf libpcap-1.10.5.tar.gz
+          mv libpcap-1.10.5 libpcap-arm64
+          (
+            cd libpcap-arm64
+            ./configure --host=aarch64-linux-gnu CC=aarch64-linux-gnu-gcc \
+                        --disable-dbus --disable-bluetooth --disable-usb \
+                        --disable-rdma --disable-shared --without-libnl \
+                        --prefix="$RUNNER_TEMP/arm64"
+            make -j"$(nproc)"
+            make install
+          )
+          # Both halves. CGO_LDFLAGS tells the linker where the archive is;
+          # without CGO_CFLAGS the compiler never finds pcap.h, because the
+          # cross build installs its headers into its own prefix while the
+          # native one lands in /usr/local/include where gcc looks anyway.
+          # Rehearsal 3 got the override applied correctly and then failed on
+          # exactly this: "fatal error: pcap.h: No such file or directory".
+          # **-L as well as the archive path, and this is the subtle one.**
+          #
+          # gopacket declares its own `#cgo LDFLAGS: -lpcap`, which we cannot
+          # remove, so the link line always ends with -lpcap however the archive
+          # is passed. The linker then searches its default directories, finds
+          # the *native amd64* libpcap.a that this same job installed into
+          # /usr/local/lib, correctly refuses it as incompatible, and then has
+          # nowhere else to look:
+          #
+          #   ld: skipping incompatible /usr/local/lib/libpcap.a
+          #   ld: cannot find -lpcap
+          #
+          # Adding -L to the arm64 prefix gives that -lpcap somewhere valid to
+          # resolve. Building both architectures in one job is what creates the
+          # trap: the wrong archive is sitting in the default search path
+          # precisely because the amd64 build needs it there.
+          echo "LIBPCAP_ARM64=-L$RUNNER_TEMP/arm64/lib $RUNNER_TEMP/arm64/lib/libpcap.a" >> "$GITHUB_ENV"
+          echo "LIBPCAP_ARM64_CFLAGS=-I$RUNNER_TEMP/arm64/include" >> "$GITHUB_ENV"
+
+      # Npcap's SDK provides the import library. The DLL is *not* shipped, it
+      # is Npcap's to distribute, and is delay-loaded so LAN Sheriff
+      # starts and explains itself on a machine that does not have it.
+      - name: Npcap SDK (Windows)
+        if: matrix.os == 'windows'
+        shell: pwsh
+        run: |
+          # Into the runner's temp directory, not the checkout: anything left in
+          # the working tree makes it dirty and goreleaser will not build from a
+          # dirty tree. See the Linux step above; both failed the same way.
+          Invoke-WebRequest -Uri https://npcap.com/dist/npcap-sdk-1.13.zip -OutFile "$env:RUNNER_TEMP\sdk.zip"
+          Expand-Archive "$env:RUNNER_TEMP\sdk.zip" -DestinationPath "$env:RUNNER_TEMP\npcap-sdk"
+          echo "CGO_LDFLAGS=-L$env:RUNNER_TEMP\npcap-sdk\Lib\x64" >> $env:GITHUB_ENV
+
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: '~> v2'
+          args: build --clean --id ${{ matrix.id }}
+
+      # The check that would have caught this on day one.
+      - name: The Linux binary must not need libpcap at runtime
+        if: matrix.os == 'linux'
+        run: |
+          set -euo pipefail
+          # **Every Linux binary, with readelf rather than ldd.**
+          #
+          # ldd can only inspect a binary the host can run, so on an x86 runner
+          # it says nothing useful about the arm64 artifact, and the arm64 one
+          # is the Raspberry Pi build that most needs checking. readelf reads
+          # the dynamic section directly and does not care what architecture it
+          # is looking at. Checking only the first binary found, as this did,
+          # would have passed a release in which arm64 was dynamically linked.
+          found=0
+          for bin in $(find dist -path '*patrol-linux*' -name 'lan-sheriff' -type f); do
+            found=$((found + 1))
+            arch=$(readelf -h "$bin" | awk '/Machine:/ {print $2, $3}')
+            echo "checking $bin  ($arch)"
+            if readelf -d "$bin" | grep -q 'NEEDED.*libpcap'; then
+              readelf -d "$bin" | grep NEEDED
+              echo "::error::$bin needs libpcap at runtime; it will not start on a machine without it"
+              exit 1
+            fi
+          done
+          if [ "$found" -eq 0 ]; then
+            echo "::error::no Linux capture binaries were produced to check"
+            exit 1
+          fi
+          echo "$found Linux binaries checked; libpcap is static in all of them"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: build-${{ matrix.os }}
+          path: dist/**/lan-sheriff*
+          retention-days: 1
+
+  # The cgo-free build. One runner reaches every target, because there
+  # is no C dependency to cross-compile.
+  portable:
+    name: build (portable)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      # The build number, from the commit count. `shell: bash` because this job
+      # also runs on Windows, where the default shell is PowerShell.
+      #
+      # The shallow check is the point: on a truncated clone `rev-list --count`
+      # still succeeds and still prints a number, just a much smaller one, so a
+      # release would carry a build number lower than the one before it and
+      # nothing would report an error.
+      - name: Build number
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+            echo "::error::shallow clone: the commit count would be wrong"; exit 1
+          fi
+          # Base plus commits here. BUILD_BASE is zero in the repository the
+          # work was done in and set once in the public one, so a fresh history
+          # continues the count rather than restarting it. See the Makefile.
+          base=$(cat BUILD_BASE 2>/dev/null || echo 0)
+          echo "BUILD_NUMBER=$(( base + $(git rev-list --count HEAD) ))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-go@v7
+        with: { go-version: '1.25' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '20' }
+      - name: Build the dashboard
+        run: make web
+      - uses: goreleaser/goreleaser-action@v7
+        with:
+          version: '~> v2'
+          args: build --clean --id portable
+      - uses: actions/upload-artifact@v7
+        with:
+          name: build-portable
+          path: dist/**/lan-sheriff*
+          retention-days: 1
+
+  release:
+    name: release
+    needs: [build, portable]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with: { fetch-depth: 0 }
+      # The build number, from the commit count. `shell: bash` because this job
+      # also runs on Windows, where the default shell is PowerShell.
+      #
+      # The shallow check is the point: on a truncated clone `rev-list --count`
+      # still succeeds and still prints a number, just a much smaller one, so a
+      # release would carry a build number lower than the one before it and
+      # nothing would report an error.
+      - name: Build number
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+            echo "::error::shallow clone: the commit count would be wrong"; exit 1
+          fi
+          # Base plus commits here. BUILD_BASE is zero in the repository the
+          # work was done in and set once in the public one, so a fresh history
+          # continues the count rather than restarting it. See the Makefile.
+          base=$(cat BUILD_BASE 2>/dev/null || echo 0)
+          echo "BUILD_NUMBER=$(( base + $(git rev-list --count HEAD) ))" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-go@v7
+        with: { go-version: '1.25' }
+      - uses: actions/setup-node@v7
+        with: { node-version: '20' }
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
+
+      # Signing the checksums and listing what went into the archives.
+      # **cosign v2, pinned deliberately.**
+      #
+      # v3 removed --output-signature and --output-certificate and defaults to
+      # the new bundle format, so it cannot produce checksums.txt.sig and .pem
+      # at all. Those two files are what the README, the release notes and
+      # install.sh tell people to verify against, so moving to a bundle is a
+      # documentation change and a change to what every user has to run, not a
+      # version bump. v2 is still maintained and released alongside v3.
+      - uses: sigstore/cosign-installer@v4.1.2
+        with:
+          cosign-release: 'v2.6.5'
+      - uses: anchore/sbom-action/download-syft@v0
+
+      # **Assembled here rather than by `goreleaser release`.**
+      #
+      # Capture builds need a real toolchain for their target, so each operating
+      # system builds on a runner of that operating system. Combining those into
+      # one release needs something that can package binaries it did not build,
+      # and GoReleaser's open-source edition cannot: `release` takes no --id,
+      # `build` is not among its --skip values, and `builder: prebuilt` is a Pro
+      # feature. `goreleaser release --clean` therefore rebuilt every target on
+      # this runner, which cannot build most of them, after --clean had deleted
+      # the artifacts that were just downloaded. Rehearsal 5 failed exactly so.
+      #
+      # scripts/release/assemble.sh does the packaging instead, and is run and
+      # tested locally rather than only in CI.
+      # nfpm builds the .deb, .rpm and .apk. Installed with go install because
+      # the toolchain is already here and it avoids depending on a third-party
+      # action for something one command does.
+      - name: nfpm, for the Linux packages
+        run: go install github.com/goreleaser/nfpm/v2/cmd/nfpm@v2.46.3
+
+      # **The gate that decides whether anything may reach the public.**
+      #
+      # Written before the code it guards, deliberately. Publishing to a
+      # Homebrew tap, a Scoop bucket or the AUR pushes a commit to a public
+      # repository, and those cannot be taken back in any meaningful sense: the
+      # moment a manifest naming a version exists, somebody's `brew upgrade` can
+      # find it. A rehearsal tag reaching one of those would put a development
+      # build in front of real users.
+      #
+      # The rule is the tag, and it is an allow-list: **only a bare vX.Y.Z may
+      # publish.** Everything else is refused, including spellings nobody thought
+      # of when the rule was written.
+      #
+      # It used to be the opposite, a deny-rule refusing any tag containing a
+      # hyphen, reasoning that semver spells every prerelease with one. The
+      # reasoning is sound and the rule was still wrong, because it only catches
+      # prereleases spelled the semver way. A tag like v0.9.8b carries no hyphen, so a
+      # deny-rule would call it a full public release and push a Homebrew cask
+      # naming 0.9.8b to a public tap.
+      #
+      # A deny-rule has to predict how the mistake will be spelled. An allow-list
+      # does not, and this is the one decision here that cannot be undone.
+      #
+      # Steps that publish outward must be gated on steps.gate.outputs.public,
+      # and there is a test for this in scripts/release/gate_test.sh.
+      - name: Decide whether this tag may publish publicly
+        id: gate
+        run: |
+          set -euo pipefail
+          tag="$GITHUB_REF_NAME"
+          if [[ "$tag" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "public=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::$tag is a full release; public channels are eligible"
+          else
+            echo "public=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::$tag is not a bare vX.Y.Z; public channels will be skipped"
+          fi
+
+      - name: Assemble the archives and checksums
+        run: |
+          set -euo pipefail
+          scripts/release/assemble.sh "${GITHUB_REF_NAME#v}" dist dist/release
+
+      # The checksums file is what a user verifies against, so it is the thing
+      # worth signing. Keyless: the release carries no long-lived key and this
+      # project holds no secret that could leak.
+      - name: Sign the checksums
+        run: |
+          set -euo pipefail
+          cosign sign-blob --yes \
+            --output-signature dist/release/checksums.txt.sig \
+            --output-certificate dist/release/checksums.txt.pem \
+            dist/release/checksums.txt
+          echo "signed; the certificate identifies the workflow that produced it"
+
+      - name: Software bill of materials
+        run: |
+          set -euo pipefail
+          syft scan dir:dist/release -o spdx-json=dist/release/sbom.spdx.json
+          echo "sbom lists $(python3 -c "import json;print(len(json.load(open('dist/release/sbom.spdx.json')).get('packages',[])))") packages"
+
+      # The version ldflags took, asserted against the artifact.
+      #
+      # This used to live in the Homebrew formula's `test` block, which had two
+      # problems: it only ran if somebody installed from the tap, and the cask
+      # that replaced the formula has no `test` block at all. Here it runs on
+      # every release, against the binary that is about to be published, and it
+      # covers both ways of asking because both exist.
+      #
+      # A binary reporting "v.1.9.9PRB" from a tag called v1.0.0 would send every
+      # bug report to the wrong place, and nothing else in the pipeline would
+      # notice: the build succeeds, the archive is well formed, and the number is
+      # simply the default baked into the source.
+      - name: The artifact must report the tag it was built from
+        run: |
+          set -euo pipefail
+          # **amd64 specifically, because this step runs the binary.**
+          # `find | head -1` picked the arm64 build and the runner is x86, which
+          # fails as "cannot execute binary file: Exec format error". Anything
+          # that executes an artifact has to choose the runner's own
+          # architecture; the arm64 build is checked by readelf below instead,
+          # which does not care what it is looking at.
+          bin=$(find dist -path '*patrol-linux_linux_amd64*' -name 'lan-sheriff' -type f | head -1)
+          [ -n "$bin" ] || { echo "::error::no amd64 Linux capture binary to run"; exit 1; }
+          chmod +x "$bin"
+          tag="${GITHUB_REF_NAME#v}"
+
+          sub=$("$bin" version)
+          flag=$("$bin" --version)
+          echo "  version:   $sub"
+          echo "  --version: $flag"
+
+          if [ "$sub" != "$flag" ]; then
+            echo "::error::the version subcommand and --version disagree"
+            exit 1
+          fi
+          case "$sub" in
+            *"$tag"*) echo "the binary reports $tag" ;;
+            *) echo "::error::the binary does not report the tag $tag; ldflags did not take"
+               exit 1 ;;
+          esac
+
+      # Asserted against the artifact rather than against our own release
+      # notes. A release that *says* it has Patrol Mode and does not would send
+      # every user to the "rebuild it" message, which is the whole thing this
+      # check exists to prevent.
+      #
+      # The check is not "is Patrol available", it will not be, since the runner
+      # grants no capture privilege. It is *which reason* the binary gives:
+      # `patrol_no_privilege` means grant privilege, `patrol_not_built` means
+      # rebuild, and only the first may ever reach somebody who downloaded this.
+      - name: The Linux artifact must have capture compiled in
+        run: |
+          set -euo pipefail
+          # Same reason as above: this one starts the binary, so it must be the
+          # architecture the runner can execute.
+          bin=$(find dist -path '*patrol-linux_linux_amd64*' -name 'lan-sheriff' -type f | head -1)
+          if [ -z "$bin" ]; then
+            echo "::error::no amd64 Linux capture binary was produced"
+            exit 1
+          fi
+          chmod +x "$bin"
+
+          "$bin" serve --data-dir "$(mktemp -d)" --listen 127.0.0.1:2999 --open=false &
+          pid=$!
+          trap 'kill $pid 2>/dev/null || true' EXIT
+          for _ in $(seq 1 30); do
+            curl -sf http://127.0.0.1:2999/api/capabilities >/dev/null && break
+            sleep 1
+          done
+
+          caps=$(curl -sf http://127.0.0.1:2999/api/capabilities)
+          echo "$caps" | python3 -m json.tool
+
+          if echo "$caps" | grep -q 'patrol_not_built'; then
+            echo "::error::the release binary reports Patrol Mode as NOT BUILT."
+            echo "::error::It would tell users to rebuild it."
+            exit 1
+          fi
+          echo "Patrol Mode is compiled in; the binary asks for privilege, not a rebuild."
+
+      # **Created last, and as a draft.**
+      #
+      # Everything above can fail, and a release that exists with half its
+      # artifacts attached is worse than no release: install.sh would find a
+      # version, fetch an archive that is not there, and report a broken
+      # download to a user who did nothing wrong. Publishing after the
+      # assertions means the release only appears once the artifacts are known
+      # good, and draft means somebody reads the notes and the file list before
+      # any of it is public.
+      - name: Publish the draft release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          ls -la dist/release
+          prerelease=""
+          [ "${{ steps.gate.outputs.public }}" = "true" ] || prerelease="--prerelease"
+          gh release create "$GITHUB_REF_NAME" \
+            --draft $prerelease \
+            --title "$GITHUB_REF_NAME" \
+            --generate-notes \
+            dist/release/*
+          echo "draft release created with $(ls dist/release | wc -l | tr -d ' ') files attached"
+
+      # **Public channels. Gated, and the commit is what the gate withholds.**
+      #
+      # This is the only step in the pipeline that writes outside this
+      # repository, and it cannot be undone: once a manifest naming a version
+      # exists in a public tap, somebody's `brew upgrade` can find it. The
+      # condition is the gate computed at the top of this job: an allow-list that
+      # passes only a bare vX.Y.Z, and scripts/release/gate_test.sh asserts it
+      # against every other spelling, including the ones without a hyphen.
+      #
+      # A missing token fails the release rather than skipping the channel. A
+      # release whose cask silently did not update is worse than one that
+      # stopped: users get an old version and no indication anything is wrong.
+      # Note there is no `if:` here. A prerelease runs this step too, and stops
+      # short of committing. Gating the whole thing meant the token, the clone
+      # and the manifest generation were exercised for the first time by
+      # v1.0.0 itself, which is the launch-day surprise this pipeline exists to
+      # avoid. Rehearsals only find what they actually run.
+      #
+      # So a rehearsal proves everything except the push, and the push is the
+      # only part that cannot be undone.
+      # **Off until a release turns it on, and v1.0.0 does not.**
+      #
+      # The first release ships as archives on the release page plus install.sh.
+      # The cask and the Scoop manifest come in the version after, once the
+      # download URLs they embed have been proved by real people fetching them.
+      #
+      # The switch is a repository variable rather than a deleted step, because
+      # the machinery is written, rehearsed and worth keeping: set PUBLISH_TAPS
+      # to true, add TAP_TOKEN, and it resumes exactly as tested.
+      #
+      # It also makes the whole pipeline safe to run on a private repository.
+      # This was the only step that wrote anywhere outside this repo, and a cask
+      # naming a version whose download URL is behind a private repo is a
+      # public file advertising a 404. With it off there is nothing to leak, so
+      # a full release can be rehearsed without the repo being public first.
+      - name: Publish the Homebrew cask and the Scoop manifest
+        if: vars.PUBLISH_TAPS == 'true'
+        env:
+          TAP_TOKEN: ${{ secrets.TAP_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TAP_TOKEN:-}" ]; then
+            echo "::error::TAP_TOKEN is not set, so the cask and Scoop manifest cannot be published."
+            echo "::error::A release that silently did not update them is worse than one that stopped."
+            exit 1
+          fi
+
+          PUBLIC="${{ steps.gate.outputs.public }}"
+          version="${GITHUB_REF_NAME#v}"
+          scripts/release/manifests.sh "$version" dist/release "$RUNNER_TEMP/manifests"
+
+          git config --global user.name "291 Group release"
+          git config --global user.email "info@291group.com"
+
+          publish() {   # repo, source file, destination path
+            local repo=$1 src=$2 dst=$3
+            local dir="$RUNNER_TEMP/$repo"
+            # The clone is the real test of the token: wrong scope, wrong
+            # repository or an expired token all fail here, on a rehearsal,
+            # rather than during the release everyone is watching.
+            git clone --depth 1 "https://x-access-token:${TAP_TOKEN}@github.com/291-Group/${repo}.git" "$dir"
+            mkdir -p "$dir/$(dirname "$dst")"
+            cp "$src" "$dir/$dst"
+            ( cd "$dir"
+              git add "$dst"
+              if git diff --cached --quiet; then
+                echo "  $repo already has $version"
+                return
+              fi
+              if [ "$PUBLIC" != "true" ]; then
+                echo "  $repo would be updated to $version; not committing, this is a prerelease"
+                git --no-pager diff --cached --stat | sed 's/^/    /'
+                return
+              fi
+              git commit -m "lan-sheriff $version"
+              # **These repositories are shared, so the push can lose a race.**
+              #
+              # A tap holds one cask per product and a bucket one manifest per
+              # product, which is what they are for: LAN Orangutan publishes its
+              # own files into these same two repositories and can never collide
+              # with ours by name. What it can collide with is the clone. If the
+              # other project commits between our clone and our push, the push
+              # is rejected as non-fast-forward, and a release fails at the one
+              # step that cannot simply be run again.
+              #
+              # Rebase and retry. Our change is a single file nobody else
+              # touches, so the rebase is never a merge decision.
+              pushed=0
+              for attempt in 1 2 3; do
+                if git push; then pushed=1; break; fi
+                echo "  $repo: push rejected on attempt $attempt, rebasing onto what landed first"
+                git pull --rebase --quiet || true
+              done
+              if [ "$pushed" -ne 1 ]; then
+                echo "::error::$repo: could not push after three attempts"
+                exit 1
+              fi
+              echo "  $repo updated to $version"
+            )
+          }
+
+          publish homebrew-tap "$RUNNER_TEMP/manifests/Casks/lan-sheriff.rb"     Casks/lan-sheriff.rb
+          publish scoop-bucket "$RUNNER_TEMP/manifests/bucket/lan-sheriff.json"  bucket/lan-sheriff.json

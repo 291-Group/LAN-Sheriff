@@ -1,0 +1,14 @@
+<!doctype html>
+<html data-theme="light">
+  <head>
+    <meta charset="utf-8"><title>map bench</title>
+    <!-- Development only. Vite builds index.html and nothing else, so this page
+         and src/bench.ts never reach internal/web/dist or a release binary.
+         Run it with `npm run dev` and open /bench.html. -->
+  </head>
+  <body style="margin:0">
+    <div id="out" style="font:13px ui-monospace,monospace;white-space:pre;padding:12px"></div>
+    <div id="wrap" style="width:900px;height:600px"><canvas id="c"></canvas></div>
+    <script type="module" src="/src/bench.ts"></script>
+  </body>
+</html>

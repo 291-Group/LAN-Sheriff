@@ -1,0 +1,193 @@
+name: Docker
+
+# Manual dispatch only.
+#
+# Not on every push, and the reason is cost rather than taste. The image builds
+# libpcap from source for each architecture, and arm64 on an amd64 runner means
+# QEMU emulation, which turns twenty seconds of compilation into several
+# minutes. A private repository bills that. An image rebuilt on every commit to
+# main would be the second most expensive thing in the account after macOS, and
+# nobody pulls an image from a commit that is nine minutes old.
+#
+# **Nothing is published until somebody asks for it by name.**
+#
+# There is no tag trigger. A workflow that published on `v*` would push an image
+# for every release rehearsal as well as for the real one, and a registry is not
+# a place where a mistake can be quietly taken back. So: manual dispatch, and it
+# builds without pushing unless the confirm field is typed out in full.
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Image tag (default: edge)'
+        required: false
+        default: 'edge'
+      confirm:
+        description: 'Type "publish" to actually push. Anything else builds and throws it away.'
+        required: true
+        default: 'dry-run'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+env:
+  REGISTRY: ghcr.io
+  # **Lowercased, because Docker refuses anything else.**
+  #
+  # github.repository_owner is "291-Group" with a capital G, and a Docker
+  # repository name must be lowercase: the reference ghcr.io/291-Group/... is
+  # rejected as invalid before a single byte reaches the network.
+  #
+  # Written out rather than lowercased in an expression, because GitHub Actions
+  # has no lowercase function and the shell workarounds are worse to read. It
+  # also matches what docker-compose.yml, the Umbrel manifest and the app store
+  # README already hardcode, so all four agree by inspection.
+  IMAGE: 291-group/lan-sheriff
+
+  # **Docker Hub as well, because that is where people look.**
+  #
+  # ghcr is canonical: docker-compose.yml, the Umbrel manifest and the app store
+  # README all name it, and an image pushed there from a private repository is
+  # private until somebody says otherwise. Docker Hub is the one people search,
+  # and it is where LAN Orangutan already lives, at 291group/lan-orangutan.
+  #
+  # The namespaces genuinely differ. ghcr follows the GitHub organisation, which
+  # is 291-Group with a hyphen; Docker Hub's is 291group without one. That is not
+  # a typo in either line.
+  #
+  # **Create the repository on Docker Hub and set it private before the first
+  # push.** Docker Hub creates a repository automatically for a name that does
+  # not exist, and an automatically created one is public, so the first push
+  # would publish the image the moment it landed with nothing to undo.
+  #
+  # Pushing here is skipped entirely when the credentials are absent, so a fork,
+  # or this repository before the secrets exist, still publishes to ghcr rather
+  # than failing.
+  DOCKERHUB_IMAGE: 291group/lan-sheriff
+
+jobs:
+  publish:
+    name: build and push (amd64, arm64)
+    runs-on: ubuntu-latest
+
+    # **Whether Docker Hub credentials exist, decided once, at job level.**
+    #
+    # The `secrets` context is not available in a step's `if:`. Referencing it
+    # there does not fail the step, it fails the whole file to parse, so the
+    # workflow never runs and GitHub reports it against the push rather than
+    # against the workflow. Job-level `env` may read secrets, and `env` is
+    # available in `if:`, so the test happens here and the steps read a plain
+    # string. Only whether the token exists is recorded, never the token.
+    env:
+      HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # arm64 is emulated. The alternative is a second runner and a manifest
+      # merge, which is more moving parts than two architectures justify while
+      # this runs a handful of times a year.
+      - uses: docker/setup-qemu-action@v4
+        with:
+          platforms: arm64
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub, if there are credentials for it
+        if: env.HAS_DOCKERHUB == 'true'
+        uses: docker/login-action@v4
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # A tag build is the version; a manual run is whatever was asked for, and
+      # 'edge' by default so it can never be mistaken for a release.
+      - name: Work out the tags, and whether this is a real publish
+        id: meta
+        env:
+          # The boolean, not the token. Only whether it exists matters here,
+          # and expanding the secret itself into the script would put it on a
+          # command line for the sake of a test that never reads it.
+          HAS_DOCKERHUB: ${{ secrets.DOCKERHUB_TOKEN != '' }}
+        run: |
+          set -euo pipefail
+          t="${{ github.event.inputs.tag }}"
+          t="${t:-edge}"
+
+          # One build, two destinations. buildx pushes the same manifest to
+          # every tag it is given, so this costs one arm64 emulation rather
+          # than two.
+          tags="${REGISTRY}/${IMAGE}:${t}"
+          if [ "$HAS_DOCKERHUB" = "true" ]; then
+            tags="${tags},${DOCKERHUB_IMAGE}:${t}"
+          else
+            echo "no Docker Hub credentials; publishing to ${REGISTRY} only"
+          fi
+
+          echo "tags=${tags}" >> "$GITHUB_OUTPUT"
+          echo "version=${t}" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event.inputs.confirm }}" = "publish" ]; then
+            echo "push=true" >> "$GITHUB_OUTPUT"
+            echo "PUBLISHING:"
+            echo "${tags}" | tr ',' '\n' | sed 's/^/  /'
+          else
+            echo "push=false" >> "$GITHUB_OUTPUT"
+            echo "dry run: building ${t} and discarding it. Type 'publish' to push."
+            echo "would have pushed:"
+            echo "${tags}" | tr ',' '\n' | sed 's/^/  /'
+          fi
+
+      - uses: docker/build-push-action@v7
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: ${{ steps.meta.outputs.push }}
+          tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            VERSION=${{ steps.meta.outputs.version }}
+            COMMIT=${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # The image is only useful if it starts and serves, so check that rather
+      # than trusting that a successful build implies a working container.
+      #
+      # amd64 only: the runner cannot execute an arm64 image without emulation
+      # that buildx has already finished with, and a smoke test that needs QEMU
+      # to answer an HTTP request is testing QEMU.
+      - name: The published image must start and serve
+        if: steps.meta.outputs.push == 'true'
+        run: |
+          set -euo pipefail
+          img="${REGISTRY}/${IMAGE}:${{ steps.meta.outputs.version }}"
+          docker pull --platform linux/amd64 "$img"
+
+          # Deliberately no capabilities: the container must come up in Deputy
+          # Mode rather than refuse to run. An image that needs the right flags
+          # before it will start is the failure this check exists to catch.
+          docker run -d --name smoke --cap-drop ALL -p 2911:2911 "$img"
+          for _ in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:2911/ || true)
+            [ "$code" = "200" ] && break
+            sleep 2
+          done
+
+          docker logs smoke
+          [ "$code" = "200" ] || { echo "::error::the dashboard did not answer"; exit 1; }
+
+          # It must also say it is in Deputy Mode rather than claiming capture
+          # it does not have.
+          docker logs smoke 2>&1 | grep -q "Deputy" \
+            || { echo "::error::no capabilities were granted but it did not fall back to Deputy Mode"; exit 1; }
+          echo "the image starts, serves, and degrades correctly"

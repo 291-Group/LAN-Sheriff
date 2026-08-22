@@ -1,0 +1,24 @@
+#!/sbin/openrc-run
+
+description="LAN Sheriff, a self-hosted network monitor"
+
+command="/usr/bin/lan-sheriff"
+command_args="serve --listen 127.0.0.1:2911 --data-dir /var/lib/lan-sheriff --open=false"
+command_user="lan-sheriff:lan-sheriff"
+command_background=true
+pidfile="/run/${RC_SVCNAME}.pid"
+output_log="/var/log/${RC_SVCNAME}.log"
+error_log="/var/log/${RC_SVCNAME}.log"
+
+# OpenRC has no ambient-capability equivalent, so capture needs the file
+# capabilities instead. Set at install time by the package, not here.
+capabilities="^cap_net_raw,^cap_net_admin"
+
+depend() {
+    need net
+    after firewall
+}
+
+start_pre() {
+    checkpath --directory --owner lan-sheriff:lan-sheriff --mode 0700 /var/lib/lan-sheriff
+}

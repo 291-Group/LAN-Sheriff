@@ -1,0 +1,17 @@
+{
+  "name": "LAN Sheriff",
+  "id": "lan-sheriff",
+  "available": true,
+  "short_desc": "Nothing leaves town unnoticed",
+  "author": "291 Group",
+  "port": 2911,
+  "categories": ["network", "security"],
+  "description": "Watches every connection leaving this machine, maps where it is headed, names the application responsible, and flags behaviour worth a second look. Observes only. All data stays on the device: no account, no cloud, no telemetry.",
+  "tipi_version": 1,
+  "version": "1.0.0",
+  "source": "https://github.com/291-Group/LAN-Sheriff",
+  "website": "https://lansheriff.com",
+  "exposable": true,
+  "supported_architectures": ["amd64", "arm64"],
+  "form_fields": []
+}
