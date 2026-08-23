@@ -10,7 +10,7 @@
   <a href="https://hub.docker.com/r/291group/lan-sheriff"><img alt="Docker" src="https://img.shields.io/docker/v/291group/lan-sheriff?label=docker&color=2496ED"></a>
 </p>
 
-> **v1.0.0, released 23 August 2026.** The first public release: twelve platform binaries, checksums signed
+> **v1.0.1, released 23 August 2026.** Twelve platform binaries, checksums signed
 > keylessly through sigstore, and an SBOM in every archive. It ships **unsigned by a certificate authority**,
 > which your operating system will mention the first time; [why, and what to do about
 > it](#your-computer-will-warn-you-the-first-time). A signed build follows as a point release and changes
@@ -241,7 +241,7 @@ anyone can contribute, and they will be taken gratefully.
 
 ## Install
 
-**v1.0.0 is on the [releases page](https://github.com/291-Group/LAN-Sheriff/releases).** Twelve binaries, five
+**v1.0.1 is on the [releases page](https://github.com/291-Group/LAN-Sheriff/releases).** Twelve binaries, five
 with packet capture and seven portable. [Building from source](#build-from-source) is one command if you would
 rather.
 

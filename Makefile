@@ -16,7 +16,7 @@ CLI_PKG     := $(PKG)/internal/cli
 # This value is what somebody building from source gets, and the README tells
 # people that building from source is one command, so it has to agree with the
 # release rather than trail it.
-VERSION     ?= v1.0.0
+VERSION     ?= v1.0.1
 COMMIT      ?= $(shell git rev-parse --short HEAD 2>/dev/null || echo none)
 BUILD_DATE  ?= $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
 # **The build number: commits reachable from HEAD, plus a base.**
