@@ -208,10 +208,7 @@ something is already written and simply held back, it says so and when.
 
 **Already written, landing in the next release.** A signed build, once Apple
 Developer enrolment completes; it needs a D-U-N-S number that had not arrived by
-release day, and nothing about the software changes when it lands. A Homebrew
-cask and a Scoop manifest, both written and rehearsed, held back because they
-embed download URLs and checksums that are worth proving against a real release
-before a package manager starts serving them.
+release day, and nothing about the software changes when it lands.
 
 Everything below is further out, and each says why.
 
@@ -298,7 +295,17 @@ See the [footnote above](#how-it-runs).
 
 ### macOS
 
-**v1.0.0 ships as a download, not a cask.** Take `lan-sheriff_<version>_darwin_arm64.tar.gz` (Apple silicon)
+**Homebrew is the easiest path, and it removes the unsigned-binary warning for you:**
+
+```sh
+brew install 291-group/tap/lan-sheriff
+```
+
+That is this project's own tap rather than homebrew-core, which has notability thresholds a new project
+cannot meet. The cask clears the quarantine attribute as it installs, so macOS does not report the binary as
+coming from an unverified developer.
+
+To download it by hand instead, take `lan-sheriff_<version>_darwin_arm64.tar.gz` (Apple silicon)
 or `lan-sheriff_<version>_darwin_amd64.tar.gz` (Intel) from the
 [releases page](https://github.com/291-Group/LAN-Sheriff/releases), or use [install.sh](#anything-else), which
 picks the right one. The archive contains a binary named `lan-sheriff`, plus its licence and checksums.
@@ -317,14 +324,17 @@ killed the instant it launches with no message at all. Delete first, or `mv` int
 
 That runs Deputy Mode, unprivileged, which is right for most people. Patrol Mode is `sudo lan-sheriff`.
 
-A Homebrew cask is written, rehearsed and deliberately held back to the next release: it embeds download URLs
-and checksums, and those are worth proving with real downloads before a package manager starts serving them.
-
 ### Windows
 
-**v1.0.0 ships as a download, not a Scoop package.** Take `lan-sheriff_<version>_windows_amd64.tar.gz` from
-the [releases page](https://github.com/291-Group/LAN-Sheriff/releases). A Scoop manifest is written and lands
-in the next release, for the same reason as the cask above.
+**Scoop:**
+
+```powershell
+scoop bucket add 291group https://github.com/291-Group/scoop-bucket
+scoop install lan-sheriff
+```
+
+To download it by hand instead, take `lan-sheriff_<version>_windows_amd64.tar.gz` from
+the [releases page](https://github.com/291-Group/LAN-Sheriff/releases).
 
 Windows 10 and 11 unpack a `.tar.gz` without anything extra. In PowerShell:
 
@@ -851,8 +861,8 @@ database is not touched either way. On macOS delete the old file before putting 
 reason in [macOS](#macos) above. On Linux, replacing the file clears the capture capability, so grant it again
 or run it under systemd with `AmbientCapabilities`, which survives an update.
 
-Once the cask and the Scoop manifest land in the next release, `brew upgrade` and `scoop update lan-sheriff`
-will do this for you.
+If you installed with Homebrew or Scoop, `brew upgrade lan-sheriff` and `scoop update lan-sheriff` do all of
+this for you.
 
 **To remove it entirely**, uninstall the package and then delete that directory. Nothing is written anywhere
 else: no registry keys, no system-wide configuration, and no account on anybody's server to close.
