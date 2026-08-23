@@ -242,13 +242,39 @@ func rangeParam(r *http.Request) time.Time {
 	return time.Now().Add(-time.Hour)
 }
 
+// maxParam bounds any integer a caller can put in a query string.
+//
+// Generous for a dashboard, where the largest store-side default is 500, and
+// small enough that the worst case is well under a megabyte rather than tens of
+// gigabytes.
+const maxParam = 10000
+
+// intParam reads a query parameter as an integer, falling back to def.
+//
+// **The result is clamped, and that is the whole point of this function.**
+//
+// Every caller hands the result to a store method that uses it as a slice
+// capacity, `make([]SearchResult, 0, limit)`. Those methods guard `limit <= 0`
+// and nothing above it, so `?limit=500000000` asked Go for tens of gigabytes in
+// one allocation and killed the process. Reachable by anyone who can open the
+// dashboard, and this product's own threat model says a monitor a stranger can
+// silence is worse than no monitor at all.
+//
+// Clamped here rather than in each store method because there are seven callers
+// and the eighth is the one that gets forgotten. Zero and negative values pass
+// through untouched: the store reads those as "use your own default", which
+// several callers rely on.
 func intParam(r *http.Request, name string, def int) int {
+	n := def
 	if v := r.URL.Query().Get(name); v != "" {
-		if n, err := strconv.Atoi(v); err == nil {
-			return n
+		if parsed, err := strconv.Atoi(v); err == nil {
+			n = parsed
 		}
 	}
-	return def
+	if n > maxParam {
+		return maxParam
+	}
+	return n
 }
 
 // SummaryResponse is the dashboard header payload.

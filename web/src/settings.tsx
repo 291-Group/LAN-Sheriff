@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks'
 import { Loading } from './loading'
-import { fetchSettings, saveSettings, wipeData, fmtBytes, message, type SettingsData } from './api'
+import { fetchSettings, saveSettings, wipeData, fmtBytes, type SettingsData } from './api'
 import { useI18n } from './i18n'
 import { DispatchPanel } from './dispatch'
 import { fetchCaptureInterfaces, type CaptureInterfaces } from './api'
