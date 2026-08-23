@@ -1,4 +1,4 @@
-<h1 align="center">291 LAN Sheriff</h1>
+<h1 align="center">LAN Sheriff</h1>
 
 <p align="center"><em>"Nothing leaves town unnoticed."</em></p>
 
