@@ -7,6 +7,7 @@
   <a href="#license"><img alt="License: AGPL v3" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg"></a>
   <img alt="Go" src="https://img.shields.io/badge/go-1.25%2B-00ADD8.svg">
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows%20%7C%20pi-lightgrey.svg">
+  <a href="https://hub.docker.com/r/291group/lan-sheriff"><img alt="Docker" src="https://img.shields.io/docker/v/291group/lan-sheriff?label=docker&color=2496ED"></a>
 </p>
 
 > **v1.0.0, released 23 August 2026.** The first public release: twelve platform binaries, checksums signed
