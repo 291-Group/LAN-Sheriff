@@ -22,6 +22,6 @@
     "@types/d3-geo": "^3.1.1",
     "@types/topojson-client": "^3.1.5",
     "typescript": "^7.0.2",
-    "vite": "^8.2.1"
+    "vite": "^8.2.2"
   }
 }
