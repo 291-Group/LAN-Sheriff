@@ -1,0 +1,46 @@
+name: CI
+
+# Twin of ci.yml for the paths ci.yml deliberately ignores.
+#
+# paths-ignore skips the entire workflow, not individual jobs, and a required
+# check belonging to a workflow that never ran sits Pending forever — which
+# blocks the pull request with no override. This reports the same "CI passed"
+# check as a no-op for exactly those paths, so the gate always resolves.
+#
+# Keep this list identical to the paths-ignore list in ci.yml. A pull request
+# touching both sets triggers both workflows, which is harmless: the real gate
+# still has to pass.
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/docker.yml'
+      - '.github/workflows/codeql.yml'
+      - '.goreleaser.yaml'
+      - 'docs/**'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+  pull_request:
+    paths:
+      - '.github/workflows/release.yml'
+      - '.github/workflows/docker.yml'
+      - '.github/workflows/codeql.yml'
+      - '.goreleaser.yaml'
+      - 'docs/**'
+      - 'CONTRIBUTING.md'
+      - 'CODE_OF_CONDUCT.md'
+      - 'SECURITY.md'
+      - 'LICENSE'
+
+permissions:
+  contents: read
+
+jobs:
+  ci-passed:
+    name: CI passed
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "No CI-relevant paths changed; CI skipped by design."

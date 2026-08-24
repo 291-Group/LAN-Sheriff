@@ -396,3 +396,23 @@ jobs:
       # push rather than nightly.
       - name: Fuzz the Dispatch frame decoder
         run: go test ./internal/dispatch/ -run XXX -fuzz FuzzReadFrame -fuzztime 60s
+
+  # Single gate for branch protection.
+  #
+  # Requiring the individual jobs does not work here: paths-ignore skips the
+  # whole workflow, and a required check that never reports leaves the pull
+  # request Pending with no way to override. This job, plus the twin in
+  # ci-skip.yml covering the ignored paths, means exactly one check named
+  # "CI passed" always reports. Require that one, and nothing else.
+  ci-passed:
+    name: CI passed
+    # always(), so the gate still reports when a job above it failed.
+    if: always()
+    needs: [test, patrol, cross-build, frontend, hygiene, security]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail if any job did not succeed
+        if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')
+        run: |
+          echo "::error::one or more CI jobs did not succeed"
+          exit 1
