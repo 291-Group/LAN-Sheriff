@@ -957,7 +957,7 @@ LAN Sheriff got its early hours on other people's networks. Thanks to the
 folks who ran pre-release builds, filed the awkward bug reports, and told us
 plainly when something didn't work:
 
-- [@username](https://github.com/Alex-Dev-T) — Alex T.
+- [@Alex-Dev-T](https://github.com/Alex-Dev-T) — Alex T.
 
 Spotted something? [Open an issue](https://github.com/291-Group/LAN-Sheriff/issues).
 Every report from a real network makes the next release better.
