@@ -3,6 +3,15 @@
 <p align="center"><em>"Nothing leaves town unnoticed."</em></p>
 
 <p align="center">
+  <img src="https://291grp.com/assets/badges-ls/stars.svg" alt="Stars" height="20">
+  <img src="https://291grp.com/assets/badges-ls/forks.svg" alt="Forks" height="20">
+  <img src="https://291grp.com/assets/badges-ls/release.svg" alt="Release" height="20">
+  <img src="https://291grp.com/assets/badges-ls/build.svg" alt="Build" height="20">
+  <img src="https://291grp.com/assets/badges-ls/license.svg" alt="License" height="20">&nbsp;
+  <a href="https://devhunt.org/tool/lan-sheriff"><img src="https://291grp.com/assets/awards/devhunt-ls.svg" alt="DevHunt - 1st Product of the Week" height="20"></a>
+</p>
+
+<p align="center">
   <a href="https://github.com/291-Group/LAN-Sheriff/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/291-Group/LAN-Sheriff/actions/workflows/ci.yml/badge.svg"></a>
   <a href="#license"><img alt="License: AGPL v3" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg"></a>
   <img alt="Go" src="https://img.shields.io/badge/go-1.25%2B-00ADD8.svg">
