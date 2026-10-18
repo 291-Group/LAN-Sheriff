@@ -1,37 +1,38 @@
 module github.com/291-Group/LAN-Sheriff
 
-go 1.25.5
+go 1.26.0
 
 // **The build toolchain, pinned as a floor rather than left to the machine.**
 //
-// go1.25.5 carries twelve reachable standard-library advisories, two of them in
-// crypto/tls, which is what The Dispatch uses for every peer connection. CI
-// happened to be clean because `go-version: '1.25'` resolves to the newest
-// patch, but anyone building from source got whatever their machine had, and
-// the beta binaries handed out on 5 August were built on 1.25.5 for exactly
-// that reason.
+// A `toolchain` line makes the Go version the module's requirement rather than
+// the builder's: any go command fetches this version or newer before building.
+// A floor, not a pin, so later security patches are still picked up. It is also
+// what carries the fix to anyone building from source, which is every user
+// until a packaged release exists.
 //
-// Raised to 1.25.13 on 14 August for five more, again reachable rather than
-// theoretical: a post-handshake message limit in crypto/tls, an asn1 recursion
-// depth reached through x509 key parsing at startup, quadratic path resolution
-// in net/url, a missing ReadHeaderTimeout on the h2c check in net/http, and an
-// idna label rejection. The first two sit directly under The Dispatch.
+// History, because each bump here has been a real advisory rather than a
+// version-chasing habit:
+//   - go1.25.14 originally, for a run of reachable standard-library advisories,
+//     two of them in crypto/tls, which The Dispatch uses for every peer
+//     connection.
+//   - Raised to go1.27.2 on 18 October 2026 for GO-2026-6617: an HPACK encoder
+//     race that crashes the net/http HTTP/2 server, reachable through the
+//     dashboard's own server per govulncheck. Fixed in the standard library at
+//     go1.26.9; go1.27.2 is the current release carrying it. The module half of
+//     the same advisory is golang.org/x/net, raised below to v0.60.0.
 //
-// A `toolchain` line makes the requirement the module's rather than the
-// builder's: any go command will fetch this version or newer before building.
-// A floor, not a pin, so security patches are still picked up automatically.
-// It is also what makes the fix reach anyone building from source, which is
-// every user until the packaged release exists.
-toolchain go1.25.14
+// The `go` directive is 1.26.0 because golang.org/x/net v0.60.0 requires it;
+// the toolchain above is what actually builds.
+toolchain go1.27.2
 
 require (
 	github.com/coder/websocket v1.8.15
 	github.com/gopacket/gopacket v1.7.1
 	github.com/oschwald/maxminddb-golang/v2 v2.5.0
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.55.0
-	golang.org/x/net v0.58.0
-	golang.org/x/sys v0.47.0
+	golang.org/x/crypto v0.57.0
+	golang.org/x/net v0.60.0
+	golang.org/x/sys v0.48.0
 	modernc.org/sqlite v1.57.0
 )
 

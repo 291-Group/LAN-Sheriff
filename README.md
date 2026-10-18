@@ -14,7 +14,7 @@
 <p align="center">
   <a href="https://github.com/291-Group/LAN-Sheriff/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/291-Group/LAN-Sheriff/actions/workflows/ci.yml/badge.svg"></a>
   <a href="#license"><img alt="License: AGPL v3" src="https://img.shields.io/badge/license-AGPL--3.0-blue.svg"></a>
-  <img alt="Go" src="https://img.shields.io/badge/go-1.25%2B-00ADD8.svg">
+  <img alt="Go" src="https://img.shields.io/badge/go-1.26%2B-00ADD8.svg">
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows%20%7C%20pi-lightgrey.svg">
   <a href="https://hub.docker.com/r/291group/lan-sheriff"><img alt="Docker" src="https://img.shields.io/docker/v/291group/lan-sheriff?label=docker&color=2496ED"></a>
 </p>
@@ -499,7 +499,7 @@ capture privilege without running the whole program as root.
 
 ## Build from source
 
-Requires Go 1.25+. Node 20+ is only needed to rebuild the dashboard, the built dashboard is committed, so
+Requires Go 1.26+. Node 20+ is only needed to rebuild the dashboard, the built dashboard is committed, so
 `go build` alone produces a working binary.
 
 ```sh

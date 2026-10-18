@@ -20,7 +20,7 @@ RUN npm run build
 # ---- binary ------------------------------------------------------------------
 # Patrol Mode needs libpcap, which needs cgo, so this cannot be a cross-compile
 # from an alien architecture. Buildx runs this stage natively per platform.
-FROM golang:1.25-bookworm AS build
+FROM golang:1.27-bookworm AS build
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential flex bison wget \
     && rm -rf /var/lib/apt/lists/*

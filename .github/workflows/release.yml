@@ -79,7 +79,7 @@ jobs:
           # Unpinned within the minor version so the release picks up standard
           # library fixes, and the security job runs govulncheck on every push so this
           # is a checked property rather than a hope.
-          go-version: '1.25'
+          go-version-file: go.mod
 
       - uses: actions/setup-node@v7
         with:
@@ -259,7 +259,7 @@ jobs:
           echo "BUILD_NUMBER=$(( base + $(git rev-list --count HEAD) ))" >> "$GITHUB_ENV"
 
       - uses: actions/setup-go@v7
-        with: { go-version: '1.25' }
+        with: { go-version-file: go.mod }
       - uses: actions/setup-node@v7
         with: { node-version: '20' }
       - name: Build the dashboard
@@ -302,7 +302,7 @@ jobs:
           echo "BUILD_NUMBER=$(( base + $(git rev-list --count HEAD) ))" >> "$GITHUB_ENV"
 
       - uses: actions/setup-go@v7
-        with: { go-version: '1.25' }
+        with: { go-version-file: go.mod }
       - uses: actions/setup-node@v7
         with: { node-version: '20' }
 
