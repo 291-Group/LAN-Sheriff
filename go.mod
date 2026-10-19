@@ -27,13 +27,13 @@ toolchain go1.27.2
 
 require (
 	github.com/coder/websocket v1.8.15
-	github.com/gopacket/gopacket v1.7.1
-	github.com/oschwald/maxminddb-golang/v2 v2.5.0
+	github.com/gopacket/gopacket v1.7.4
+	github.com/oschwald/maxminddb-golang/v2 v2.8.0
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.57.0
-	golang.org/x/net v0.60.0
-	golang.org/x/sys v0.48.0
-	modernc.org/sqlite v1.57.0
+	golang.org/x/crypto v0.58.0
+	golang.org/x/net v0.61.0
+	golang.org/x/sys v0.49.0
+	modernc.org/sqlite v1.60.1
 )
 
 require (
@@ -44,10 +44,7 @@ require (
 	github.com/ncruces/go-strftime v1.0.0 // indirect
 	github.com/remyoudompheng/bigfft v0.0.0-20230129092748-24d4a6f8daec // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/stretchr/testify v1.12.1 // indirect
-	golang.org/x/mod v0.40.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
-	modernc.org/libc v1.75.3 // indirect
+	modernc.org/libc v1.77.1 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
-	modernc.org/memory v1.12.0 // indirect
+	modernc.org/memory v1.12.1 // indirect
 )
