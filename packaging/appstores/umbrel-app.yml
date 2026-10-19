@@ -6,7 +6,7 @@ manifestVersion: 1
 id: lan-sheriff
 category: networking
 name: LAN Sheriff
-version: "1.0.0"
+version: "1.0.2"
 tagline: Nothing leaves town unnoticed
 description: >-
   LAN Sheriff shows you everything your machine and, given the right vantage

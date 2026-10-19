@@ -9,7 +9,7 @@ services:
       APP_PORT: 2911
 
   web:
-    image: ghcr.io/291-group/lan-sheriff:1.0.0
+    image: ghcr.io/291-group/lan-sheriff:1.0.2
     restart: on-failure
     stop_grace_period: 1m
 

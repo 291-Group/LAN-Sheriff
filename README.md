@@ -17,7 +17,7 @@
   <a href="https://hub.docker.com/r/291group/lan-sheriff"><img alt="Docker" src="https://img.shields.io/docker/v/291group/lan-sheriff?label=docker&color=2496ED"></a>
 </p>
 
-> **v1.0.1, released 23 August 2026.** Twelve platform binaries, checksums signed
+> **v1.0.2, released 19 October 2026.** Twelve platform binaries, checksums signed
 > keylessly through sigstore, and an SBOM in every archive. It ships **unsigned by a certificate authority**,
 > which your operating system will mention the first time; [why, and what to do about
 > it](#your-computer-will-warn-you-the-first-time). A signed build follows as a point release and changes
@@ -207,7 +207,7 @@ places for a year has started talking to a fourth, and leave the judgement to yo
 If you outgrow it, the tools above are waiting and this will have taught you what
 to point them at. That is a good outcome, not a defeat.
 
-## Not in v1.0.0, and what comes next
+## Not in 1.0, and what comes next
 
 Stated here rather than left to be discovered, because a list of what a tool
 does not do is worth more than another paragraph about what it does. Where
@@ -216,6 +216,15 @@ something is already written and simply held back, it says so and when.
 **Already written, landing in the next release.** A signed build, once Apple
 Developer enrolment completes; it needs a D-U-N-S number that had not arrived by
 release day, and nothing about the software changes when it lands.
+
+**In development: 1.5, the router release.** An OpenWrt version is being built
+now. The first report from a router ([issue #9](https://github.com/291-Group/LAN-Sheriff/issues/9))
+showed that LAN Sheriff already runs there; it just does not yet think like a
+router. 1.5 makes the router a first-class vantage point: internal addresses
+taken from the capture interface's own prefixes, IPv6 included, neighbour
+discovery over netlink, a device's own traffic counting as presence, a
+per-device traffic view, flow-offload detection, and `.ipk` and `.apk`
+packages. Fixes for slow storage such as SD cards ship earlier, in 1.0.x.
 
 Everything below is further out, and each says why.
 
@@ -226,12 +235,12 @@ capturing fresh for a chosen flow, with a size cap, a time limit, and the
 interface saying plainly what is being written and where. That is a design, and
 it is v2.
 
-**Patrol Mode on OpenWrt and BSD firewalls.** The two places a network monitor
-most wants to live, and the two it cannot reach yet. OpenWrt builds against musl
-and many of its devices are mips; the released Linux binary links glibc
-deliberately, because a fully static glibc build breaks name resolution and this
-one resolves names. pfSense and OPNsense are FreeBSD, which today is served only
-by the capture-free portable build.
+**Routers beyond the 1.5 work.** On OpenWrt today, Deputy Mode runs on arm64
+with the portable build and Patrol Mode runs in Docker with host networking; a
+proper package is the 1.5 work above. Routers on mips stay out: the embedded
+database has no 32-bit mips support, and most of those devices have too little
+memory for the full program anyway. pfSense and OPNsense are FreeBSD, which
+today is served only by the capture-free portable build.
 
 **Email notifications.** Webhook, ntfy, Discord and Slack all work. Email needs
 either an SMTP configuration for every user or a relay we would have to run, and
@@ -248,7 +257,7 @@ anyone can contribute, and they will be taken gratefully.
 
 ## Install
 
-**v1.0.1 is on the [releases page](https://github.com/291-Group/LAN-Sheriff/releases).** Twelve binaries, five
+**v1.0.2 is on the [releases page](https://github.com/291-Group/LAN-Sheriff/releases).** Twelve binaries, five
 with packet capture and seven portable. [Building from source](#build-from-source) is one command if you would
 rather.
 
