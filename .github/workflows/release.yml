@@ -320,7 +320,7 @@ jobs:
       # install.sh tell people to verify against, so moving to a bundle is a
       # documentation change and a change to what every user has to run, not a
       # version bump. v2 is still maintained and released alongside v3.
-      - uses: sigstore/cosign-installer@v4.1.2
+      - uses: sigstore/cosign-installer@v4.1.3
         with:
           cosign-release: 'v2.6.5'
       - uses: anchore/sbom-action/download-syft@v0
