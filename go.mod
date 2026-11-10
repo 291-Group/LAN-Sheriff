@@ -27,7 +27,7 @@ toolchain go1.27.2
 
 require (
 	github.com/coder/websocket v1.8.15
-	github.com/gopacket/gopacket v1.7.1
+	github.com/gopacket/gopacket v1.7.2
 	github.com/oschwald/maxminddb-golang/v2 v2.5.0
 	github.com/spf13/cobra v1.10.2
 	golang.org/x/crypto v0.57.0
