@@ -9,7 +9,7 @@
 # ---- dashboard ---------------------------------------------------------------
 # Built first and separately: it changes on its own schedule and its own cache
 # layer keeps a Go-only edit from reinstalling node_modules.
-FROM node:24-alpine AS web
+FROM node:26-alpine AS web
 WORKDIR /src
 COPY web/package.json web/package-lock.json* ./
 RUN npm install --no-audit --no-fund
