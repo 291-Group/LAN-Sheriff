@@ -71,11 +71,23 @@ while IFS= read -r bin; do
   # The binary keeps its plain name inside the archive: install.sh copies
   # whatever it finds to lan-sheriff, and a Windows build needs its .exe.
   cp "$bin" "$stage/$(basename "$bin")"
+  # **Executable, explicitly.** The binaries reach this job through
+  # upload-artifact and download-artifact, which do not keep file
+  # permissions, so every archive up to and including 1.0.3's first build
+  # shipped a lan-sheriff that would not run until the user chmod'ed it.
+  chmod 0755 "$stage/$(basename "$bin")"
   for f in $COMMON $extra; do
     [ -f "$f" ] && cp "$f" "$stage/"
   done
 
   tar -czf "$OUT/${name}.tar.gz" -C "$stage" .
+  # Checked in the archive itself, not the staging copy, because the archive
+  # is what people download.
+  mode=$(tar -tvzf "$OUT/${name}.tar.gz" "./$(basename "$bin")" | awk '{print $1}')
+  case "$mode" in
+    -rwx*) ;;
+    *) echo "::error::${name}.tar.gz: $(basename "$bin") is $mode, not executable" >&2; exit 1 ;;
+  esac
   say "packed ${name}.tar.gz"
   found=$((found + 1))
 done < <(find "$DIST" -type f \( -name "$BIN" -o -name "$BIN.exe" \) | sort)
