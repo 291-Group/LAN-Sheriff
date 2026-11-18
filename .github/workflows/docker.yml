@@ -145,6 +145,19 @@ jobs:
             echo "no Docker Hub credentials; publishing to ${REGISTRY} only"
           fi
 
+          # **A release version is also latest, in the same push.** Running the
+          # workflow a second time for 'latest' built a second image, so latest
+          # and the version had different digests for every release up to 1.0.3,
+          # where latest had to be re-labelled by hand. Tagged here, both names
+          # point at the one manifest this build produces. Only a bare X.Y.Z
+          # qualifies: 'edge', '1.0.4-beta.1' and anything else stay off latest.
+          if [[ "$t" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            tags="${tags},${REGISTRY}/${IMAGE}:latest"
+            if [ "$HAS_DOCKERHUB" = "true" ]; then
+              tags="${tags},${DOCKERHUB_IMAGE}:latest"
+            fi
+          fi
+
           echo "tags=${tags}" >> "$GITHUB_OUTPUT"
           echo "version=${t}" >> "$GITHUB_OUTPUT"
           if [ "${{ github.event.inputs.confirm }}" = "publish" ]; then
@@ -204,6 +217,12 @@ jobs:
 
           # It must also say it is in Deputy Mode rather than claiming capture
           # it does not have.
-          docker logs smoke 2>&1 | grep -q "Deputy" \
+          # Captured first, then searched. `docker logs | grep -q` under pipefail
+          # fails on a passing image: grep exits at the first match, docker logs
+          # takes SIGPIPE on its next write, and pipefail reports that as the
+          # pipeline's result. It failed the 1.0.3 publish this way after the
+          # images had already been pushed.
+          logs=$(docker logs smoke 2>&1)
+          grep -q "Deputy" <<<"$logs" \
             || { echo "::error::no capabilities were granted but it did not fall back to Deputy Mode"; exit 1; }
           echo "the image starts, serves, and degrades correctly"
