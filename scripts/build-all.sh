@@ -45,7 +45,8 @@ OUT="${1:-$ROOT/dist/testing}"
 # nothing pointing at the actual cause.
 mkdir -p "$OUT"
 OUT="$(cd "$OUT" && pwd)"
-LIBPCAP=1.10.5
+LIBPCAP=1.10.7
+LIBPCAP_SHA256=0b394ac90dbc0a9838ff97468e05c9c9a3e873dec2514cd58db65d859d296e31
 
 cd "$ROOT"
 commit=$(git rev-parse --short HEAD)
@@ -160,6 +161,7 @@ apt-get update -qq
 apt-get install -y -qq wget build-essential flex bison >/dev/null
 cd /tmp
 wget -q https://www.tcpdump.org/release/libpcap-${LIBPCAP}.tar.gz
+echo "${LIBPCAP_SHA256}  libpcap-${LIBPCAP}.tar.gz" | sha256sum -c - >/dev/null
 tar xzf libpcap-${LIBPCAP}.tar.gz && cd libpcap-${LIBPCAP}
 ./configure --disable-dbus --disable-bluetooth --disable-usb \\
             --disable-rdma --disable-shared --without-libnl >/dev/null
@@ -184,7 +186,7 @@ EOF
   # is that nobody has to remember. Quiet, and not fatal: an offline build with
   # a recent image is still worth having, and the version assertion below is
   # what actually decides whether the result may ship.
-  docker pull -q golang:1.25-bookworm >/dev/null 2>&1 || true
+  docker pull -q golang:1.27-trixie >/dev/null 2>&1 || true
 
   for pair in amd64:X86-64 arm64:AArch64; do
     arch=${pair%%:*}; elf=${pair##*:}
@@ -192,9 +194,9 @@ EOF
     if docker run --rm --platform "linux/$arch" \
         -e TARGET="lan-sheriff_linux_${arch}" \
         -v "$work:/src" -v "$OUT:/out" -v "$work/build.sh:/build.sh:ro" \
-        golang:1.25-bookworm bash /build.sh >/dev/null 2>&1 \
+        golang:1.27-trixie bash /build.sh >/dev/null 2>&1 \
       && docker run --rm --platform "linux/$arch" -v "$OUT:/out" -v "$ROOT/scripts:/s:ro" \
-        golang:1.25-bookworm bash /s/verify-linux-binary.sh "/out/lan-sheriff_linux_${arch}" "$elf" >/dev/null 2>&1
+        golang:1.27-trixie bash /s/verify-linux-binary.sh "/out/lan-sheriff_linux_${arch}" "$elf" >/dev/null 2>&1
     then
       ok "linux/$arch" capture
     else

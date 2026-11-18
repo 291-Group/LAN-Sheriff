@@ -1,6 +1,9 @@
 package enrich
 
 import (
+	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -140,5 +143,39 @@ func TestUnloadedLabellerLabelsNothing(t *testing.T) {
 	}
 	if _, ok := l.Category("doubleclick.net"); ok {
 		t.Error("an unloaded labeller must not claim to know anything")
+	}
+}
+
+// A domain on both the malware list and the ads list must come out as malware,
+// or threat_list never sees it. It came out as ads until 1.0.3, because the
+// ads list was fetched first and the first list to claim a domain wins.
+func TestMalwareLabelWinsOverAds(t *testing.T) {
+	dir := t.TempDir()
+	write := func(cat, body string) {
+		for _, src := range defaultLists {
+			if src.category == cat {
+				path := filepath.Join(dir, "list-"+src.name+".txt")
+				if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+					t.Fatal(err)
+				}
+				return
+			}
+		}
+		t.Fatalf("no default list has category %q", cat)
+	}
+	write(CategoryMalware, "both.example\nonly-bad.example\n")
+	write(CategoryAds, "0.0.0.0 both.example\n0.0.0.0 only-ads.example\n")
+
+	l := NewLabeller(dir)
+	l.Ensure(context.Background()) // fresh copies on disk, so nothing is fetched
+
+	for domain, want := range map[string]string{
+		"both.example":     CategoryMalware,
+		"only-bad.example": CategoryMalware,
+		"only-ads.example": CategoryAds,
+	} {
+		if got, _ := l.Category(domain); got != want {
+			t.Errorf("Category(%q) = %q, want %q", domain, got, want)
+		}
 	}
 }

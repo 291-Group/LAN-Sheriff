@@ -31,7 +31,9 @@ func (s *Server) dnsOptions(r *http.Request) store.DNSOptions {
 		Device:      q.Get("device"),
 		Domain:      q.Get("domain"),
 		FlaggedOnly: q.Get("flagged") == "1",
-		Limit:       intParam(r, "limit", 200),
+		// Reverse lookups are hidden from the feed unless asked for.
+		IncludeReverse: q.Get("reverse") == "1",
+		Limit:          intParam(r, "limit", 200),
 	}
 }
 

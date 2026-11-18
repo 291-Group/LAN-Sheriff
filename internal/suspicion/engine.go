@@ -23,6 +23,11 @@ type Engine struct {
 	// Window is how far back each pass looks. Longer than the interval between
 	// passes, so a slow pass cannot leave a gap in what was examined.
 	Window time.Duration
+
+	// OnPassError, when set, is given the first error of every pass that had
+	// one. The store uses it to notice a damaged database, which shows up
+	// here first: the rules are the heaviest readers it has.
+	OnPassError func(error)
 }
 
 // DefaultWindow is the period each pass examines.
@@ -92,6 +97,9 @@ func (e *Engine) RunPeriodically(ctx context.Context, every time.Duration, basel
 		base := time.Since(baselineAt())
 		if err := e.Run(ctx, time.Now(), base); err != nil && ctx.Err() == nil {
 			slog.Debug("suspicion pass had errors", "err", err)
+			if e.OnPassError != nil {
+				e.OnPassError(err)
+			}
 		}
 	}
 	run()

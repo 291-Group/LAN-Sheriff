@@ -287,6 +287,7 @@ export const zh: Catalog = {
     newDomains: '新增',
     flagged: '已标记',
     flaggedOnly: '仅已标记',
+    showReverse: '显示反向查询',
     noLookups: '此时段内没有记录到 DNS 查询。',
     noLookupsHint:
       '通常是因为加密 DNS。浏览器和 Windows 越来越多地通过 HTTPS 发送查询，不拦截 TLS 就无法读取，而 LAN Sheriff 从不这样做。VPN 或独立的解析器同样会让查询不可见。',
@@ -363,6 +364,8 @@ export const zh: Catalog = {
     title: '观测数据未被保存',
     body: 'LAN Sheriff 能看到网络活动但无法保存，因此此视图并非最新。错误：{error}',
     failures: '连续 {count} 次写入失败',
+    damagedTitle: '数据库已损坏',
+    damagedBody: 'LAN Sheriff 记录的部分内容已无法读取，因此通缉名单和部分视图已停止更新。这不会自行恢复。修复方法：停止 LAN Sheriff，把 {files} 移出数据文件夹，然后重新启动。它会新建数据库，因此历史记录、设备名称和设置都会重新开始。这种损坏通常意味着存储设备正在失效；如果是存储卡，请考虑更换。错误为：{error}',
   },
 
   deputize: {
@@ -408,7 +411,8 @@ export const zh: Catalog = {
     subtitle: 'LAN Sheriff 的工作方式，以及它能看到和看不到什么',
     startTitle: '从这里开始',
     startMode: '此安装当前运行在{mode}。',
-    startSees: '从这里能看到什么',
+    startOn: '当前可用',
+    startOff: '当前不可用',
     startDo: '要看到更多',
     seeApps: '本机上哪个应用打开了每个连接',
     seeDevices: '网络上的其他设备',
@@ -644,6 +648,7 @@ export const zh: Catalog = {
     e_first_contact: '首次连接 {org}。该设备在 {observed_days} 天内连接过 {known_orgs} 个组织。',
     e_beaconing: '每 {interval} 连接一次 {org}，共 {hits} 次，规律度 {regularity}%。',
     e_rare_destination: '连接了 {country}，其占本网络流量的 {share_pct}%。',
+    e_rare_destination_many: '连接了 {countries} 个本网络通常从不访问的国家或地区，其中包括 {examples}，合计占流量的 {share_pct}%。',
     e_dga_domain: '对 {names} 个不存在的机器生成域名发起了查询，例如 {example}。',
     e_port_scan_v: '探测了 {target} 的 {ports} 个端口，其中 {connected} 个有响应。',
     e_port_scan_h: '在 {hosts} 台设备上探测了端口 {port}，其中 {connected} 台有响应。',

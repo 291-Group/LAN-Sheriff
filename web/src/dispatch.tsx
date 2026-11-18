@@ -153,8 +153,8 @@ export function DispatchPanel() {
     return (
       <section class="dispatch">
         <h3>{t.dispatch.title}</h3>
-        <p class="modal-note"><strong>{t.dispatch.offTitle}</strong></p>
-        <p class="modal-note">{t.dispatch.offBody}</p>
+        <p class="sheriff-dialog-note"><strong>{t.dispatch.offTitle}</strong></p>
+        <p class="sheriff-dialog-note">{t.dispatch.offBody}</p>
         {error && <p class="gate-error">{error}</p>}
         {/* Turning this on shares nothing by itself, no peer exists until a
             code is carried between two machines, so the button says what it
@@ -185,7 +185,7 @@ export function DispatchPanel() {
     <section class="dispatch">
       <h3>{t.dispatch.title}</h3>
 
-      <dl class="modal-facts">
+      <dl class="sheriff-dialog-facts">
         <dt>{t.dispatch.thisMachine}</dt>
         <dd><code class="peer-id">{fingerprint(state.peer_id)}</code></dd>
         {state.listen && (<>
@@ -197,7 +197,7 @@ export function DispatchPanel() {
       {error && <p class="gate-error">{error}</p>}
 
       {state.peers.length === 0 ? (
-        <p class="modal-note">
+        <p class="sheriff-dialog-note">
           {t.dispatch.noPeers} {t.dispatch.noPeersHint}
         </p>
       ) : (
@@ -220,7 +220,7 @@ export function DispatchPanel() {
           a code, and both ended up on a dialog with nothing to type into.
           Neither had done the half that needs typing, and nothing on screen
           said the two halves existed. */}
-      <p class="modal-note pair-roles">{t.dispatch.pairRoles}</p>
+      <p class="sheriff-dialog-note pair-roles">{t.dispatch.pairRoles}</p>
       <div class="peer-actions">
         <button type="button"
           class="btn"
@@ -274,7 +274,7 @@ export function DispatchPanel() {
       {/* Switching sharing off keeps existing pairings. Stopping and unpairing
           are different decisions, and conflating them would quietly discard
           peers somebody went to the trouble of establishing. */}
-      <p class="modal-note dispatch-off-note">
+      <p class="sheriff-dialog-note dispatch-off-note">
         <button type="button"
           class="ghost-btn"
           disabled={busy}
@@ -391,7 +391,7 @@ function Peer({ peer, onChanged, onError }: {
 
       {confirming ? (
         <div class="danger-actions">
-          <p class="modal-note">{t.dispatch.unpairHint}</p>
+          <p class="sheriff-dialog-note">{t.dispatch.unpairHint}</p>
           <button type="button"
             class="btn-danger"
             onClick={() => act(async () => { await unpairPeer(peer.peer_id); setConfirming(false) })}
@@ -470,13 +470,13 @@ function ShowCode(
   return (
     // **Rendered into <body>, not where it sits in the tree.**
     //
-    // .modal carries backdrop-filter, and backdrop-filter makes an element a
+    // .sheriff-dialog carries backdrop-filter, and backdrop-filter makes an element a
     // containing block for position:fixed descendants. A nested modal's
     // `inset: 0` backdrop therefore resolved against the settings box instead
     // of the viewport: it blurred part of that box and stopped dead, leaving a
     // hard horizontal edge with everything below it sharp and readable.
     createPortal(
-    <div class="modal-backdrop">
+    <div class="sheriff-dialog-backdrop">
       {/* No dismiss-on-backdrop, unlike every other modal here. Closing this
           cancels the pairing window, which is right, but a single click outside
           the box did it silently, and looking at the other machine is exactly
@@ -484,8 +484,8 @@ function ShowCode(
           and the far side was told "could not reach that address", which sent
           people chasing a network fault that did not exist. The x still closes
           it, deliberately. */}
-      <div class="modal pair-modal" onClick={(e) => e.stopPropagation()}>
-        <div class="modal-head">
+      <div class="sheriff-dialog sheriff-dialog-pair" onClick={(e) => e.stopPropagation()}>
+        <div class="sheriff-dialog-head">
           <h2>{t.dispatch.pairTitle}</h2>
           <button type="button"
             class="close"
@@ -527,7 +527,7 @@ function ShowCode(
           <CopyButton value={code.code} />
         </div>
 
-        <dl class="modal-facts">
+        <dl class="sheriff-dialog-facts">
           <dt>{t.dispatch.pairAddress}</dt>
           <dd class="pair-addr">
             <code id={`clip-${slug(code.listen)}`}>{code.listen}</code>
@@ -538,7 +538,7 @@ function ShowCode(
         {/* Tabular figures and a reserved width: the number counts down every
             second, and text that reflows as digits drop is distracting on a
             screen somebody is reading a code from. */}
-        <p class="modal-note countdown">
+        <p class="sheriff-dialog-note countdown">
           {left > 0
             ? fill(t.dispatch.pairExpires, { time: countdown(left) })
             : t.dispatch.pairExpired}
@@ -549,7 +549,7 @@ function ShowCode(
             closing the window already cancels it, so walking away is how you
             revoke one. */}
         {left > 0
-          ? <p class="modal-note">{t.dispatch.pairWaiting}</p>
+          ? <p class="sheriff-dialog-note">{t.dispatch.pairWaiting}</p>
           : <button type="button" class="btn pair-renew" onClick={onNew}>{t.dispatch.pairNewCode}</button>}
       </div>
     </div>,
@@ -619,15 +619,15 @@ function EnterCode({ onClose }: { onClose: () => void }) {
   // this one still discarded a half-entered pairing, which is worse, because
   // the code it was for is spent either way.
   return createPortal(
-    <div class="modal-backdrop">
-      <div class="modal pair-modal" onClick={(e) => e.stopPropagation()}>
-        <div class="modal-head">
+    <div class="sheriff-dialog-backdrop">
+      <div class="sheriff-dialog sheriff-dialog-pair" onClick={(e) => e.stopPropagation()}>
+        <div class="sheriff-dialog-head">
           <h2>{t.dispatch.joinTitle}</h2>
           <button type="button" class="close" onClick={onClose} title={t.actions.close}>×</button>
         </div>
 
         {error && <p class="gate-error">{error}</p>}
-        {done && <p class="modal-note"><strong>{done}</strong></p>}
+        {done && <p class="sheriff-dialog-note"><strong>{done}</strong></p>}
 
         <form onSubmit={submit}>
           <label class="field">

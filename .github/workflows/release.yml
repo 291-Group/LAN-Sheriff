@@ -46,7 +46,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { os: linux, runner: ubuntu-latest, id: patrol-linux }
+          - { os: linux, runner: ubuntu-24.04, id: patrol-linux }
           - { os: darwin, runner: macos-latest, id: patrol-darwin }
           - { os: windows, runner: windows-latest, id: patrol-windows }
     steps:
@@ -83,7 +83,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       # The dashboard is embedded in the binary, so it is built before anything
       # else and identically on every runner.
@@ -104,7 +104,7 @@ jobs:
           set -euo pipefail
           sudo apt-get update
           sudo apt-get install -y build-essential flex bison
-          # **Built outside the checkout.** Unpacking here left libpcap-1.10.5/
+          # **Built outside the checkout.** Unpacking here left libpcap-1.10.7/
           # and its tarball untracked in the working tree, and goreleaser refuses
           # to build from a dirty tree because a dirty tree means the artifact
           # does not correspond to the commit it claims. Both capture jobs failed
@@ -123,11 +123,15 @@ jobs:
           # user gets the portable binary and no packet capture at all.
           sudo apt-get install -y gcc-aarch64-linux-gnu
           cd "$RUNNER_TEMP"
-          wget -q https://www.tcpdump.org/release/libpcap-1.10.5.tar.gz
+          wget -q https://www.tcpdump.org/release/libpcap-1.10.7.tar.gz
+          # The hash of the tarball whose signature was checked against The
+          # Tcpdump Group's release key. Same reason as the Dockerfile: this
+          # archive is linked into every Linux binary that ships.
+          echo "0b394ac90dbc0a9838ff97468e05c9c9a3e873dec2514cd58db65d859d296e31  libpcap-1.10.7.tar.gz" | sha256sum -c -
 
           # Native, for amd64, installed where CGO_LDFLAGS already points.
-          tar xzf libpcap-1.10.5.tar.gz
-          mv libpcap-1.10.5 libpcap-amd64
+          tar xzf libpcap-1.10.7.tar.gz
+          mv libpcap-1.10.7 libpcap-amd64
           (
             cd libpcap-amd64
             ./configure --disable-dbus --disable-bluetooth --disable-usb \
@@ -139,8 +143,8 @@ jobs:
           # Cross, for arm64. A separate prefix so the two static archives
           # cannot be confused for one another, which would produce a binary
           # that links and then refuses to start on the wrong architecture.
-          tar xzf libpcap-1.10.5.tar.gz
-          mv libpcap-1.10.5 libpcap-arm64
+          tar xzf libpcap-1.10.7.tar.gz
+          mv libpcap-1.10.7 libpcap-arm64
           (
             cd libpcap-arm64
             ./configure --host=aarch64-linux-gnu CC=aarch64-linux-gnu-gcc \
@@ -186,6 +190,10 @@ jobs:
           # the working tree makes it dirty and goreleaser will not build from a
           # dirty tree. See the Linux step above; both failed the same way.
           Invoke-WebRequest -Uri https://npcap.com/dist/npcap-sdk-1.13.zip -OutFile "$env:RUNNER_TEMP\sdk.zip"
+          # The SDK's headers and import library go into the Windows binary;
+          # the hash is of the archive this release was first built against.
+          $sdkHash = (Get-FileHash "$env:RUNNER_TEMP\sdk.zip" -Algorithm SHA256).Hash.ToLower()
+          if ($sdkHash -ne "dad1f2bf1b02b787be08ca4862f99e39a876c1f274bac4ac0cedc9bbc58f94fd") { throw "npcap-sdk-1.13.zip: unexpected SHA256 $sdkHash" }
           Expand-Archive "$env:RUNNER_TEMP\sdk.zip" -DestinationPath "$env:RUNNER_TEMP\npcap-sdk"
           echo "CGO_LDFLAGS=-L$env:RUNNER_TEMP\npcap-sdk\Lib\x64" >> $env:GITHUB_ENV
 
@@ -234,7 +242,7 @@ jobs:
   # is no C dependency to cross-compile.
   portable:
     name: build (portable)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
@@ -261,7 +269,7 @@ jobs:
       - uses: actions/setup-go@v7
         with: { go-version-file: go.mod }
       - uses: actions/setup-node@v7
-        with: { node-version: '20' }
+        with: { node-version: '24' }
       - name: Build the dashboard
         run: make web
       - uses: goreleaser/goreleaser-action@v7
@@ -277,7 +285,7 @@ jobs:
   release:
     name: release
     needs: [build, portable]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
@@ -304,7 +312,7 @@ jobs:
       - uses: actions/setup-go@v7
         with: { go-version-file: go.mod }
       - uses: actions/setup-node@v7
-        with: { node-version: '20' }
+        with: { node-version: '24' }
 
       - uses: actions/download-artifact@v8
         with:

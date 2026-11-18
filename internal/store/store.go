@@ -10,6 +10,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
@@ -31,6 +32,10 @@ type Store struct {
 	// Set by the caller so the store does not need to know that notifications
 	// exist.
 	OnFinding func(rule, subject string, score float64)
+
+	// damage is latched the first time the database is found malformed.
+	// See integrity.go.
+	damage damageLatch
 }
 
 // Open opens (creating if needed) the database at path.
@@ -58,8 +63,22 @@ func Open(path string) (*Store, error) {
 	// Patrol Mode did, and the symptom was device sightings being dropped,
 	// silent data loss in the Roster, reported only as a warning nobody would
 	// read. Taking the write lock up front removes the race rather than racing.
+	//
+	// **Checkpoints are taken by a timer, not by whichever write happens to
+	// cross the threshold.** SQLite's default is to checkpoint the write-ahead
+	// log inline, from the committing connection, once the log passes 1000
+	// pages (about 4 MB). On an SD card that checkpoint is a multi-second stall,
+	// and it landed inside the pipeline's flush every few minutes, where it
+	// held the write lock and made every other writer fail. The threshold is
+	// raised so the inline checkpoint is a backstop that should never fire
+	// while the process is healthy, and RunCheckpointer takes passive
+	// checkpoints on its own schedule from a connection nobody is waiting on.
+	// journal_size_limit lets the log shrink back after a large checkpoint
+	// instead of holding its high-water mark on the card forever.
 	dsn := path + "?_pragma=journal_mode(WAL)&_pragma=busy_timeout(5000)" +
-		"&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(ON)&_txlock=immediate"
+		"&_pragma=synchronous(NORMAL)&_pragma=foreign_keys(ON)&_txlock=immediate" +
+		"&_pragma=wal_autocheckpoint(" + walAutoCheckpointPages + ")" +
+		"&_pragma=journal_size_limit(" + walSizeLimitBytes + ")"
 	db, err := sql.Open("sqlite", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
@@ -166,6 +185,89 @@ func (s *Store) migrate() error {
 // Close releases the database.
 func (s *Store) Close() error { return s.db.Close() }
 
+// Checkpointing, see the DSN in Open for why the defaults are not used.
+const (
+	// walAutoCheckpointPages is the inline-checkpoint backstop: 20,000 pages
+	// is about 80 MB of log, twenty times the default, far more than the
+	// timer leaves behind on a healthy install.
+	walAutoCheckpointPages = "20000"
+	// walSizeLimitBytes is how large the -wal file may remain after a
+	// checkpoint has emptied it. 64 MB.
+	walSizeLimitBytes = "67108864"
+	// CheckpointInterval is how often RunCheckpointer folds the log back into
+	// the database.
+	CheckpointInterval = 30 * time.Second
+)
+
+// Checkpoint folds the write-ahead log into the database without waiting for
+// readers or writers: a PASSIVE checkpoint does as much as it can and leaves
+// the rest for next time. It reports how many frames were in the log and how
+// many were written back.
+func (s *Store) Checkpoint(ctx context.Context) (logFrames, checkpointed int, err error) {
+	var busy int
+	err = s.db.QueryRowContext(ctx, `PRAGMA wal_checkpoint(PASSIVE)`).Scan(&busy, &logFrames, &checkpointed)
+	return logFrames, checkpointed, err
+}
+
+// RunCheckpointer takes a passive checkpoint every CheckpointInterval until
+// ctx is cancelled. It never blocks a writer: PASSIVE yields to them, and a
+// checkpoint that could not finish is simply resumed next time.
+func (s *Store) RunCheckpointer(ctx context.Context) {
+	t := time.NewTicker(CheckpointInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			frames, done, err := s.Checkpoint(ctx)
+			if err != nil {
+				s.NoteErr("checkpoint", err)
+				if ctx.Err() == nil && !isBusy(err) {
+					slog.Warn("checkpoint failed", "err", err)
+				}
+				continue
+			}
+			if frames > 0 {
+				slog.Debug("checkpointed write-ahead log", "frames", frames, "written", done)
+			}
+		}
+	}
+}
+
+// OpenReadOnly opens an existing database for reading only: no migrations,
+// no statistics refresh, no permission changes, and a connection that SQLite
+// will refuse to write through.
+//
+// For the second process. `lan-sheriff status` runs from a Docker health
+// check every minute, and it used Open, which migrates, marks the baseline
+// and may run ANALYZE, each a write, each taking the lock the serving
+// process is trying to hold, each from a separate process on a card that
+// is already stalling. A health check that made the thing it was checking
+// less healthy. A reader under WAL takes no lock a writer waits on.
+//
+// An older database than this build knows about reads as far as its tables
+// allow; a missing table is an error from the query, not from Open.
+func OpenReadOnly(path string) (*Store, error) {
+	if _, err := os.Stat(path); err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+	dsn := "file:" + path + "?mode=ro&_pragma=busy_timeout(2000)"
+	db, err := sql.Open("sqlite", dsn)
+	if err != nil {
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+	// Two connections, not one: a caller that iterates one result while it
+	// runs a second query needs the second, and database/sql would otherwise
+	// wait on itself.
+	db.SetMaxOpenConns(2)
+	if err := db.Ping(); err != nil {
+		db.Close()
+		return nil, fmt.Errorf("open database: %w", err)
+	}
+	return &Store{db: db, path: path}, nil
+}
+
 // DB exposes the handle for callers that need one-off queries.
 func (s *Store) DB() *sql.DB { return s.db }
 
@@ -198,6 +300,11 @@ func direction(f types.Flow) types.Direction {
 }
 
 // WriteFlows upserts a batch of flows in a single transaction.
+//
+// Not retried on a busy database, unlike the writers in retry.go: the
+// pipeline keeps a failed batch and offers it again on its own schedule, so a
+// retry here would only hold the ingest goroutine longer for the same result.
+// The batch is the caller's and is untouched by a failure.
 func (s *Store) WriteFlows(ctx context.Context, flows []types.Flow) error {
 	if len(flows) == 0 {
 		return nil

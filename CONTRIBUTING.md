@@ -12,7 +12,7 @@ make build        # builds the dashboard and the binary
 ./lan-sheriff serve
 ```
 
-`make build` needs Go 1.25 and Node 20. Packet capture is behind a build tag, because it needs cgo and a
+`make build` needs Go 1.26 and Node 24. Packet capture is behind a build tag, because it needs cgo and a
 libpcap, and the default build stays cgo-free so that cross-compiling to a Raspberry Pi and `go install` both
 remain trivial:
 
@@ -39,8 +39,8 @@ thing that is not visible: the alternative that was tried and failed, the platfo
 the bug this shape prevents. There are comments in this repository longer than the function beneath them, and
 they are the ones most worth keeping.
 
-**Every user-visible string is translated into all twelve languages.** English, French, Spanish, German,
-Portuguese, Russian, Chinese, Japanese, Hindi, Bengali, Arabic and Hebrew. The type checker fails on a missing
+**Every user-visible string is translated into all sixteen languages.** English, French, Spanish, German,
+Italian, Portuguese, Polish, Russian, Ukrainian, Chinese, Japanese, Korean, Hindi, Bengali, Arabic and Hebrew. The type checker fails on a missing
 key, and `scripts/check-i18n.mjs` catches the subtler damage: Latin text spliced into a non-Latin catalogue by
 a careless bulk edit. Commands, flags, file paths and product names stay untranslated, because they are typed
 rather than read.
@@ -51,9 +51,6 @@ rather than read.
 **Backend prose is never sent to the browser.** The server has no idea what language the reader uses, so
 anything destined for a person travels as a stable code and is rendered on the client. `scripts/check-msg-codes.mjs`
 fails if a code has no translation.
-
-**Canadian English, and no em dashes.** Both are enforced by review rather than by a script, except in the
-no-JS page, where a test checks the dashes.
 
 ## Where things live
 

@@ -25,7 +25,13 @@ type DNSOptions struct {
 	Domain string
 	// FlaggedOnly restricts results to names that matched a labelling list.
 	FlaggedOnly bool
-	Limit       int
+	// IncludeReverse keeps reverse lookups (`in-addr.arpa`, `ip6.arpa`) in the
+	// feed. Off by default: a NAS or a mail server resolving every address it
+	// sees produces thousands of them, and they drowned the first router
+	// install's feed in names nobody typed. They are still recorded, still
+	// searched, still exported; only the feed hides them unless asked.
+	IncludeReverse bool
+	Limit          int
 
 	// Export lifts the feed ceiling. Set only by the export handler.
 	Export bool
@@ -77,6 +83,11 @@ func (s *Store) DNSEvents(ctx context.Context, o DNSOptions) ([]types.DNSEvent, 
 	}
 	if o.FlaggedOnly {
 		where = append(where, "flagged IS NOT NULL AND flagged != ''")
+	}
+	// A search for a name is explicit and shows whatever matches it, reverse
+	// lookups included; the default feed does not.
+	if !o.IncludeReverse && !o.Export && strings.TrimSpace(o.Domain) == "" {
+		where = append(where, "qname NOT LIKE '%.arpa'")
 	}
 	args = append(args, o.limit())
 

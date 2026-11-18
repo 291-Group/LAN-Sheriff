@@ -263,12 +263,9 @@ export function Roster({ layer = '', openDevice }: { layer?: string; openDevice?
                     {d.trust === TRUST_DEPUTIZED && <span class="tag deputized">{t.deputize.deputized}</span>}
                     {d.trust === TRUST_WATCHED && <span class="tag watched">{t.deputize.watched}</span>}
                   </td>
-                  {/* A placeholder, not a comma. These two cells read '—' until
-                      the em dash purge rewrote every one in the tree, and a
-                      dash in a table cell is not the prose punctuation that rule
-                      is about: the result was a column of bare commas under the
-                      heading "Maker". A middle dot instead, the same character
-                      the status bar uses for a value it does not have yet. */}
+                  {/* A placeholder for an empty cell: a middle dot, the same
+                      character the status bar uses for a value it does not have
+                      yet. */}
                   <td class="mono"><bdi>{d.ip || '\u00b7'}</bdi></td>
                   <td><bdi>{d.vendor || '\u00b7'}</bdi></td>
                   <td>{d.online ? t.roster.online : fmtAgo(d.last_seen)}</td>

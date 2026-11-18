@@ -541,4 +541,26 @@ CREATE TABLE IF NOT EXISTS pairing_log (
 );
 CREATE INDEX IF NOT EXISTS idx_pairing_log_ts ON pairing_log(ts);
 `,
+	// 18: carry rare_destination findings over to the per-device key.
+	//
+	// The rule now raises one finding per device, however many countries are
+	// involved (suspicion/rare_destination.go says why). The old keys carry a
+	// country suffix the rule no longer emits, so nothing would refresh them.
+	// For each device its earliest open finding is re-keyed, so the rule's
+	// next pass updates it in place, keeping first-seen and sending no new
+	// notification; the rest are cleared. As with migrations 10 and 11: a
+	// change of key needs this second fix.
+	`
+UPDATE findings SET dedup = 'rare_destination:' || subject
+WHERE id IN (
+  SELECT MIN(f.id) FROM findings f
+  WHERE f.rule = 'rare_destination' AND f.status = 'open'
+    AND f.dedup LIKE 'rare_destination:%:%'
+    AND NOT EXISTS (SELECT 1 FROM findings g WHERE g.dedup = 'rare_destination:' || f.subject)
+  GROUP BY f.subject
+);
+UPDATE findings SET status = 'cleared'
+WHERE rule = 'rare_destination' AND status = 'open'
+  AND dedup LIKE 'rare_destination:%:%';
+`,
 }

@@ -6,9 +6,9 @@ import { en, type Catalog } from './en'
 /**
  * Every language except English is loaded on demand.
  *
- * Twelve catalogues is 291 KB of source, and bundling all of them put the
- * application within a few kilobytes of its size budget while eleven of the
- * twelve were dead weight for any given reader. English stays in the main
+ * Sixteen catalogues is about 390 KB of source, and bundling all of them
+ * would put the application well past its size budget while fifteen of the
+ * sixteen were dead weight for any given reader. English stays in the main
  * bundle because it is the default, the fallback, and the type the others are
  * checked against; the rest become their own chunks that Vite emits separately
  * and the browser fetches only if chosen.
@@ -25,6 +25,10 @@ const loaders: Record<Exclude<Lang, 'en'>, () => Promise<{ default?: Catalog } &
   pt: () => import('./pt'),
   ru: () => import('./ru'),
   bn: () => import('./bn'),
+  it: () => import('./it'),
+  ko: () => import('./ko'),
+  pl: () => import('./pl'),
+  uk: () => import('./uk'),
 }
 
 /** Catalogues already fetched, so switching back is instant. */
@@ -46,13 +50,16 @@ async function loadCatalog(lang: Lang): Promise<Catalog> {
   }
 }
 
-export type Lang = 'en' | 'fr' | 'es' | 'de' | 'ar' | 'he' | 'ja' | 'zh' | 'hi' | 'pt' | 'ru' | 'bn'
+export type Lang =
+  | 'en' | 'fr' | 'es' | 'de' | 'ar' | 'he' | 'ja' | 'zh' | 'hi' | 'pt' | 'ru' | 'bn'
+  | 'it' | 'ko' | 'pl' | 'uk'
 
 /** Direction is needed before a catalogue has loaded, so it is kept separately
  *  rather than read from one. */
 const DIRECTIONS: Record<Lang, 'ltr' | 'rtl'> = {
   en: 'ltr', fr: 'ltr', es: 'ltr', de: 'ltr', pt: 'ltr', ru: 'ltr',
   ja: 'ltr', zh: 'ltr', hi: 'ltr', bn: 'ltr',
+  it: 'ltr', ko: 'ltr', pl: 'ltr', uk: 'ltr',
   ar: 'rtl', he: 'rtl',
 }
 
@@ -67,10 +74,14 @@ export const LANGUAGES: { id: Lang; native: string; english: string }[] = [
   { id: 'de', native: 'Deutsch', english: 'German' },
   { id: 'he', native: 'עברית', english: 'Hebrew' },
   { id: 'hi', native: 'हिन्दी', english: 'Hindi' },
+  { id: 'it', native: 'Italiano', english: 'Italian' },
   { id: 'ja', native: '日本語', english: 'Japanese' },
+  { id: 'ko', native: '한국어', english: 'Korean' },
+  { id: 'pl', native: 'Polski', english: 'Polish' },
   { id: 'pt', native: 'Português', english: 'Portuguese' },
   { id: 'ru', native: 'Русский', english: 'Russian' },
   { id: 'es', native: 'Español', english: 'Spanish' },
+  { id: 'uk', native: 'Українська', english: 'Ukrainian' },
 ]
 
 const STORAGE_KEY = 'sheriff-lang'

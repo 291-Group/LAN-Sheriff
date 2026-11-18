@@ -287,6 +287,7 @@ export const fr: Catalog = {
     newDomains: 'nouveaux',
     flagged: 'signalés',
     flaggedOnly: 'Signalés seulement',
+    showReverse: 'Afficher les recherches inversées',
     noLookups: 'Aucune requête DNS enregistrée sur cette période.',
     noLookupsHint:
       'Le DNS chiffré en est la raison habituelle. Les navigateurs et Windows envoient de plus en plus les requêtes via HTTPS, illisibles sans intercepter TLS, ce que LAN Sheriff ne fait jamais. Un VPN ou un résolveur distinct déplace également les requêtes hors de vue.',
@@ -363,6 +364,8 @@ export const fr: Catalog = {
     title: 'Les observations ne sont pas enregistrées',
     body: 'LAN Sheriff voit l\'activité du réseau mais ne peut pas l\'enregistrer, cette vue n\'est donc pas à jour. L\'erreur était : {error}',
     failures: '{count} écritures échouées d\'affilée',
+    damagedTitle: 'La base de données est endommagée',
+    damagedBody: 'Une partie de ce que LAN Sheriff a enregistré ne peut plus être lue : les Avis de Recherche et certaines vues ne se mettent plus à jour. Cela ne se corrige pas tout seul. Pour réparer, arrêtez LAN Sheriff, déplacez {files} hors du dossier de données, puis redémarrez-le : il crée une nouvelle base, donc l\'historique, les noms des appareils et les réglages repartent de zéro. Ce type de dommage signifie généralement que le stockage est défaillant ; sur une carte SD, envisagez de la remplacer. L\'erreur était : {error}',
   },
 
   deputize: {
@@ -408,7 +411,8 @@ export const fr: Catalog = {
     subtitle: 'Le fonctionnement de LAN Sheriff, et ce qu\'il peut ou ne peut pas voir',
     startTitle: 'Commencer ici',
     startMode: 'Cette installation fonctionne actuellement en {mode}.',
-    startSees: 'Ce qu elle voit d ici',
+    startOn: 'Actif maintenant',
+    startOff: 'Indisponible pour le moment',
     startDo: 'Pour en voir plus',
     seeApps: 'Quelle application de cette machine a ouvert chaque connexion',
     seeDevices: 'Les autres appareils de votre réseau',
@@ -644,6 +648,7 @@ export const fr: Catalog = {
     e_first_contact: 'A contacté {org} pour la première fois. Cet appareil a joint {known_orgs} organisations en {observed_days} jours.',
     e_beaconing: 'S\'est connecté à {org} toutes les {interval}, {hits} fois, avec une régularité de {regularity} %.',
     e_rare_destination: 'A joint {country}, qui représente {share_pct} % du trafic de ce réseau.',
+    e_rare_destination_many: 'A joint {countries} pays que ce réseau ne fréquente jamais par ailleurs, dont {examples}, qui représentent ensemble {share_pct} % du trafic.',
     e_dga_domain: 'A effectué {names} requêtes vers des noms de domaine générés automatiquement qui n\'existent pas, tels que {example}.',
     e_port_scan_v: 'A sondé {ports} ports sur {target}, dont {connected} ont répondu.',
     e_port_scan_h: 'A sondé le port {port} sur {hosts} appareils, dont {connected} ont répondu.',

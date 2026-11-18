@@ -14,10 +14,10 @@
 <p align="center">
   <img alt="Go" src="https://img.shields.io/badge/go-1.26%2B-00ADD8.svg">
   <img alt="Platforms" src="https://img.shields.io/badge/platforms-linux%20%7C%20macos%20%7C%20windows%20%7C%20pi-lightgrey.svg">
-  <a href="https://hub.docker.com/r/291group/lan-sheriff"><img alt="Docker" src="https://img.shields.io/docker/v/291group/lan-sheriff?label=docker&color=2496ED"></a>
+  <a href="https://hub.docker.com/r/291group/lan-sheriff"><img alt="Docker" src="https://img.shields.io/docker/v/291group/lan-sheriff?label=docker&sort=semver&color=2496ED"></a>
 </p>
 
-> **v1.0.2, released 19 October 2026.** Twelve platform binaries, checksums signed
+> **v1.0.3, released 18 November 2026.** Twelve platform binaries, checksums signed
 > keylessly through sigstore, and an SBOM in every archive. It ships **unsigned by a certificate authority**,
 > which your operating system will mention the first time; [why, and what to do about
 > it](#your-computer-will-warn-you-the-first-time). A signed build follows as a point release and changes
@@ -160,7 +160,7 @@ the middle. See [docs/DISPATCH-PROTOCOL.md](docs/DISPATCH-PROTOCOL.md).
 
 **Everything else**, global search across destinations, domains, devices and apps. CSV and JSON export of
 any view. Outbound alerts to webhook, ntfy, Discord or Slack, all off unless configured. A bounded,
-self-pruning rolling history, so it is safe to leave running on a Pi for weeks. Full interface in 12
+self-pruning rolling history, so it is safe to leave running on a Pi for weeks. Full interface in 16
 languages including right-to-left Arabic and Hebrew.
 
 **It never blocks, drops, or modifies traffic.** Capture is entirely passive: no code path writes a packet
@@ -251,13 +251,13 @@ mail server.
 adoption in July 2026 after a wave of malicious takeovers, and pushes with it.
 Arch users can use `install.sh` or build from source in the meantime.
 
-**Reviewed translations.** All twelve languages ship, and only the English has
+**Reviewed translations.** All sixteen languages ship, and only the English has
 been written by a native speaker. Corrections are the single most useful thing
 anyone can contribute, and they will be taken gratefully.
 
 ## Install
 
-**v1.0.2 is on the [releases page](https://github.com/291-Group/LAN-Sheriff/releases).** Twelve binaries, five
+**v1.0.3 is on the [releases page](https://github.com/291-Group/LAN-Sheriff/releases).** Twelve binaries, five
 with packet capture and seven portable. [Building from source](#build-from-source) is one command if you would
 rather.
 
@@ -379,7 +379,7 @@ rather than leaving you to discover it at the first warning dialog.
 
 A signed build is coming. Apple Developer enrolment requires a D-U-N-S number, which had
 not arrived in time, and the account cannot be opened without one. Waiting would have held
-a finished product for a registration number, so **v1.0.0 ships unsigned on every platform
+a finished product for a registration number, so **1.0 ships unsigned on every platform
 and a signed build follows as a point release** once the account exists. Nothing about the
 software changes when it does; the signature says who published it, not what it does.
 
@@ -506,7 +506,7 @@ capture privilege without running the whole program as root.
 
 ## Build from source
 
-Requires Go 1.26+. Node 20+ is only needed to rebuild the dashboard, the built dashboard is committed, so
+Requires Go 1.26+. Node 24 is only needed to rebuild the dashboard, the built dashboard is committed, so
 `go build` alone produces a working binary.
 
 ```sh
@@ -663,7 +663,7 @@ natural hub: pair the laptop to it and the Raspberry Pi to it, and that one dash
 for two pairings instead of three.
 
 Being introduced by a peer, where one machine offers you a fingerprint for another and you confirm it against
-that machine's own screen, is a reasonable future addition and is not in v1.0.0.
+that machine's own screen, is a reasonable future addition and is not in 1.0.
 
 ### What machines call each other
 
@@ -705,15 +705,15 @@ Every binary carries a build number as well as a version, shown in the dashboard
 screen, in Help, and by `lan-sheriff version`:
 
 ```
-lan-sheriff v1.0.0 build 146 (commit 7d12324, built 2026-08-23T10:14:02Z)
+lan-sheriff v1.0.2 build 202 (commit 703557c, built 2026-10-19T17:47:31Z)
 ```
 
 It rises on its own with every commit and identifies an exact tree, where a version identifies a release,
 which is weeks of trees. **Quote the build number in a bug report.**
 
 It does not start at one, and that is deliberate rather than a mistake. This repository begins at v1.0.0, but
-the software does not: the number continues from the private repository the work was done in, so build 146 is
-the hundred and forty-sixth build of LAN Sheriff and not the first. A count that restarted here would say
+the software does not: the number continues from the private repository the work was done in, so build 202 is
+the two hundred and second build of LAN Sheriff and not the first. A count that restarted here would say
 something untrue about how much had been built and tested before any of it was published. `BUILD_BASE` in the
 repository root holds the offset, and the count adds to it.
 
@@ -794,10 +794,12 @@ would rather not use a browser, or you keep scripts turned off, the same data is
 
 ```sh
 lan-sheriff status                    # what this machine shares, and with whom
+lan-sheriff health                    # is the running instance alive (exit 0 if so)
 ```
 
-That one needs no password, no privilege and no running server: it reads the database directly, which makes it
-the thing that answers when nothing else does.
+The first needs no password, no privilege and no running server: it reads the database directly, read-only, which
+makes it the thing that answers when nothing else does. The second asks a running instance over its own API and
+needs no password either; it is what the Docker health check runs, and it touches nothing but a socket.
 
 Everything the dashboard shows can also be fetched as CSV or JSON; see
 [Taking your data out](#taking-your-data-out) for the views, the columns and the row limit.
@@ -868,6 +870,15 @@ Everything is one SQLite file plus the downloaded datasets, in one directory:
 
 Override it with `--data-dir`, or `LAN_SHERIFF_DATA_DIR`. The Linux packages run as a service account, so their
 data lives under `/var/lib/lan-sheriff` instead.
+
+**Where to put it on a router or a Pi.** The database is written every few seconds for as long as LAN Sheriff
+runs, and that is the one workload SD cards are worst at: an ordinary card stalls for seconds under it and wears
+out in months. Prefer a USB drive or eMMC when the board has one. If the SD card is the only storage, as it is on
+many routers, LAN Sheriff copes: observations that cannot be written while the card is stalled are held in memory
+and written when it recovers, and checkpoints are taken on a timer rather than in the middle of a write. A high-endurance card, the kind sold for
+dashcams, lasts years under this load where an ordinary one lasts months. Never put the data directory on a
+network share over NFS or SMB. SQLite does not work correctly on them, and the result is a database that stalls
+harder and can corrupt, which is worse than the card.
 
 **To back it up**, stop LAN Sheriff and copy the directory. Copying `sheriff.db` while it is running can catch
 it mid-write; the CSV and JSON exports are the safe way to take a copy without stopping anything.
@@ -940,7 +951,7 @@ in the background on first run; nothing is uploaded in either direction.
 | World outline | Drawing the map | [Natural Earth](https://www.naturalearthdata.com) via [world-atlas](https://github.com/topojson/world-atlas) | Public domain (data); ISC (packaging) |
 | MAC → manufacturer (embedded) | Naming the maker of a device on the Roster | IEEE OUI registry | Public registry |
 | Ad and tracker domains (fetched) | Labelling lookups in Radio Chatter | [StevenBlack/hosts](https://github.com/StevenBlack/hosts) | MIT |
-| Malware domains (fetched) | The `threat_list` rule | [URLhaus](https://urlhaus.abuse.ch) by abuse.ch | CC0 |
+| Malware domains (fetched) | The `threat_list` rule | [HaGeZi Threat Intelligence Feeds](https://github.com/hagezi/dns-blocklists), mini | GPL-3.0 |
 
 **DB-IP requires attribution**, so it is credited in the product itself, on the Watchtower, where the data is
 being used, as well as here. That is a licence obligation and not a courtesy.

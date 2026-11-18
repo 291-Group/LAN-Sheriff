@@ -289,6 +289,7 @@ export const ar: Catalog = {
     newDomains: 'جديدة',
     flagged: 'مُعلَّمة',
     flaggedOnly: 'المُعلَّمة فقط',
+    showReverse: 'إظهار الاستعلامات العكسية',
     noLookups: 'لم تُسجَّل أي استعلامات DNS خلال هذه المدة.',
     noLookupsHint:
       'التشفير هو السبب المعتاد. تُرسل المتصفحات وويندوز عمليات البحث عبر HTTPS بشكل متزايد، ولا يمكن قراءتها دون اعتراض TLS، وهو ما لا يفعله LAN Sheriff أبداً. كما أن شبكة VPN أو محلل أسماء منفصل ينقل عمليات البحث بعيداً عن الأنظار.',
@@ -365,6 +366,8 @@ export const ar: Catalog = {
     title: 'لا يجري حفظ المشاهدات',
     body: 'يرى LAN Sheriff نشاط الشبكة لكنه لا يستطيع حفظه، لذا فهذه الشاشة ليست محدّثة. الخطأ: {error}',
     failures: '{count} عمليات كتابة فاشلة متتالية',
+    damagedTitle: 'قاعدة البيانات تالفة',
+    damagedBody: 'لم يعد بالإمكان قراءة جزء مما سجّله LAN Sheriff، لذلك توقفت قائمة المطلوبين وبعض العروض عن التحديث. لن يُصلح هذا نفسه. لإصلاحه، أوقف LAN Sheriff، وانقل {files} خارج مجلد البيانات، ثم شغّله من جديد: سينشئ قاعدة بيانات جديدة، فيبدأ السجل وأسماء الأجهزة والإعدادات من البداية. يعني تلف كهذا عادةً أن وسيط التخزين يتعطل؛ وإن كانت بطاقة ذاكرة ففكّر في استبدالها. كان الخطأ: {error}',
   },
 
   deputize: {
@@ -410,7 +413,8 @@ export const ar: Catalog = {
     subtitle: 'كيف يعمل LAN Sheriff، وما الذي يستطيع رؤيته وما لا يستطيع',
     startTitle: 'ابدأ من هنا',
     startMode: 'يعمل هذا التثبيت الآن في {mode}.',
-    startSees: 'ما يمكنه رؤيته من هنا',
+    startOn: 'يعمل الآن',
+    startOff: 'غير متاح حاليًا',
     startDo: 'لرؤية المزيد',
     seeApps: 'التطبيق الذي فتح كل اتصال على هذا الجهاز',
     seeDevices: 'الأجهزة الأخرى على شبكتك',
@@ -646,6 +650,7 @@ export const ar: Catalog = {
     e_first_contact: 'اتصل بـ {org} لأول مرة. اتصل هذا الجهاز بـ {known_orgs} جهة خلال {observed_days} يومًا.',
     e_beaconing: 'اتصل بـ {org} كل {interval}، {hits} مرة، بانتظام {regularity}٪.',
     e_rare_destination: 'اتصل بـ {country}، وهي تمثّل {share_pct}٪ من حركة هذه الشبكة.',
+    e_rare_destination_many: 'اتصل بـ {countries} دولة لا تستخدمها هذه الشبكة عادةً، منها {examples}، وتمثّل معًا {share_pct}٪ من حركتها.',
     e_dga_domain: 'أجرى {names} استعلامًا عن أسماء نطاقات مُولَّدة آليًا غير موجودة، مثل {example}.',
     e_port_scan_v: 'فحص {ports} منفذًا على {target}، استجاب منها {connected}.',
     e_port_scan_h: 'فحص المنفذ {port} على {hosts} جهازًا، استجاب منها {connected}.',

@@ -60,12 +60,15 @@ export function Chatter({
   const [events, setEvents] = useState<DNSEvent[]>([])
   const [domains, setDomains] = useState<DomainSummary[]>([])
   const [flaggedOnly, setFlaggedOnly] = useState(false)
+  // Reverse lookups (in-addr.arpa, ip6.arpa) are hidden unless asked for;
+  // the store's DNSOptions.IncludeReverse says why.
+  const [showReverse, setShowReverse] = useState(false)
 
   const load = useCallback(async () => {
     try {
       setSummary(await fetchDNSSummary(filter))
       if (tab === 'feed') {
-        setEvents((await fetchDNS(filter, flaggedOnly)).events)
+        setEvents((await fetchDNS(filter, flaggedOnly, showReverse)).events)
       } else if (tab === 'top') {
         setDomains((await fetchTopDomains(filter)).domains)
       } else {
@@ -74,7 +77,7 @@ export function Chatter({
     } catch {
       /* the status bar reports connection state; nothing useful to add here */
     }
-  }, [filter, tab, flaggedOnly])
+  }, [filter, tab, flaggedOnly, showReverse])
 
   useEffect(() => {
     load()
@@ -152,6 +155,16 @@ export function Chatter({
                 onChange={(e) => setFlaggedOnly((e.target as HTMLInputElement).checked)}
               />
               {t.chatter.flaggedOnly}
+            </label>
+          )}
+          {tab === 'feed' && (
+            <label class="chatter-toggle">
+              <input
+                type="checkbox"
+                checked={showReverse}
+                onChange={(e) => setShowReverse((e.target as HTMLInputElement).checked)}
+              />
+              {t.chatter.showReverse}
             </label>
           )}
         </div>

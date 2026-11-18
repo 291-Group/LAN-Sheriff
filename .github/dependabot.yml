@@ -48,3 +48,14 @@ updates:
         patterns: ["*"]
     commit-message:
       prefix: "ci"
+
+  # The base images in the Dockerfile. A Debian release goes LTS-only
+  # quietly, and a base image that is never bumped carries whatever its
+  # packages have accumulated since; nothing else here would say so.
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    commit-message:
+      prefix: "deps"

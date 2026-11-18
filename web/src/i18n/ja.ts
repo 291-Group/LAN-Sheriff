@@ -287,6 +287,7 @@ export const ja: Catalog = {
     newDomains: '新規',
     flagged: '該当',
     flaggedOnly: '該当のみ',
+    showReverse: '逆引きを表示',
     noLookups: 'この期間に DNS の照会は記録されていません。',
     noLookupsHint:
       '暗号化 DNS が主な理由です。ブラウザーや Windows は問い合わせを HTTPS で送ることが増えており、TLS を傍受しなければ読めません。LAN Sheriff は決してそれを行いません。VPN や別のリゾルバーも問い合わせを見えない場所へ移します。',
@@ -363,6 +364,8 @@ export const ja: Catalog = {
     title: '観測結果が保存されていません',
     body: 'LAN Sheriff はネットワークの動きを確認できていますが保存できないため、この表示は最新ではありません。エラー: {error}',
     failures: '書き込みが連続 {count} 回失敗',
+    damagedTitle: 'データベースが破損しています',
+    damagedBody: 'LAN Sheriff が記録した内容の一部が読み取れなくなったため、手配リストと一部の表示が更新されなくなっています。これは自然には直りません。直すには、LAN Sheriff を停止し、{files} を データフォルダーの外へ移動してから、もう一度起動してください。新しいデータベースが作成されるため、履歴、デバイス名、設定は最初からになります。このような破損はたいてい記憶装置の故障を意味します。メモリーカードの場合は交換を検討してください。エラー: {error}',
   },
 
   deputize: {
@@ -408,7 +411,8 @@ export const ja: Catalog = {
     subtitle: 'LAN Sheriff の仕組みと、見えるもの・見えないもの',
     startTitle: 'ここから始めます',
     startMode: 'この環境は現在 {mode} で動作しています。',
-    startSees: 'ここから見えるもの',
+    startOn: '現在動作中',
+    startOff: '現在は利用できません',
     startDo: 'さらに見るには',
     seeApps: 'この端末でどのアプリが各接続を開いたか',
     seeDevices: 'ネットワーク上の他の端末',
@@ -644,6 +648,7 @@ export const ja: Catalog = {
     e_first_contact: '{org} に初めて接続しました。このデバイスは {observed_days} 日間で {known_orgs} 件の組織に接続しています。',
     e_beaconing: '{org} へ {interval} ごとに {hits} 回、規則性 {regularity}% で接続しました。',
     e_rare_destination: '{country} に接続しました。これはこのネットワークの通信の {share_pct}% にあたります。',
+    e_rare_destination_many: 'このネットワークが普段使わない {countries} か国（{examples} など）に接続しました。合計で通信の {share_pct}% にあたります。',
     e_dga_domain: '存在しない機械生成のドメイン名を {names} 件照会しました。例: {example}',
     e_port_scan_v: '{target} の {ports} 個のポートを調べ、うち {connected} 個が応答しました。',
     e_port_scan_h: '{hosts} 台のデバイスのポート {port} を調べ、うち {connected} 台が応答しました。',

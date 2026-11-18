@@ -9,7 +9,7 @@
 # ---- dashboard ---------------------------------------------------------------
 # Built first and separately: it changes on its own schedule and its own cache
 # layer keeps a Go-only edit from reinstalling node_modules.
-FROM node:20-alpine AS web
+FROM node:24-alpine AS web
 WORKDIR /src
 COPY web/package.json web/package-lock.json* ./
 RUN npm install --no-audit --no-fund
@@ -20,7 +20,7 @@ RUN npm run build
 # ---- binary ------------------------------------------------------------------
 # Patrol Mode needs libpcap, which needs cgo, so this cannot be a cross-compile
 # from an alien architecture. Buildx runs this stage natively per platform.
-FROM golang:1.27-bookworm AS build
+FROM golang:1.27-trixie AS build
 RUN apt-get update && apt-get install -y --no-install-recommends \
       build-essential flex bison wget \
     && rm -rf /var/lib/apt/lists/*
@@ -35,8 +35,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 #
 # Built with the optional backends off, the archive links cleanly and the binary
 # depends on nothing but libc.
-ARG LIBPCAP=1.10.5
+# 1.10.7 (September 2026) closed seven CVEs in the BPF interpreter and the
+# offline filter, after 1.10.6 closed an out-of-bounds read and write in
+# address parsing. The archive is checked against the hash of the tarball whose
+# signature was verified against The Tcpdump Group's release key, because a
+# download that is linked into every Linux binary is not something to take on
+# trust from whatever a mirror answers with that day.
+ARG LIBPCAP=1.10.7
+ARG LIBPCAP_SHA256=0b394ac90dbc0a9838ff97468e05c9c9a3e873dec2514cd58db65d859d296e31
 RUN wget -q "https://www.tcpdump.org/release/libpcap-${LIBPCAP}.tar.gz" \
+ && echo "${LIBPCAP_SHA256}  libpcap-${LIBPCAP}.tar.gz" | sha256sum -c - \
  && tar xzf "libpcap-${LIBPCAP}.tar.gz" \
  && cd "libpcap-${LIBPCAP}" \
  && ./configure --disable-dbus --disable-bluetooth --disable-usb --disable-rdma \
@@ -56,6 +64,10 @@ COPY --from=web /internal/web/dist ./internal/web/dist
 
 ARG VERSION=docker
 ARG COMMIT=unknown
+# The commit count, which the release binaries carry and the image did not:
+# every container footer read "build 0", which is the one number a bug
+# report needs. Passed in by the workflow; a local build shows 0 honestly.
+ARG BUILD=0
 # The archive by absolute path, not -lpcap. gopacket declares its own
 # `#cgo LDFLAGS: -lpcap`, which the linker resolves to the shared object if one
 # exists; naming the file leaves it nothing to choose.
@@ -66,7 +78,8 @@ RUN CGO_ENABLED=1 CGO_LDFLAGS="/usr/local/lib/libpcap.a" \
     go build -tags patrol \
       -ldflags "-s -w \
         -X github.com/291-Group/LAN-Sheriff/internal/cli.Version=${VERSION} \
-        -X github.com/291-Group/LAN-Sheriff/internal/cli.Commit=${COMMIT}" \
+        -X github.com/291-Group/LAN-Sheriff/internal/cli.Commit=${COMMIT} \
+        -X github.com/291-Group/LAN-Sheriff/internal/cli.Build=${BUILD}" \
       -o /out/lan-sheriff ./cmd/lan-sheriff \
  && ldd /out/lan-sheriff | grep -q libpcap \
     && { echo "libpcap is still linked dynamically" >&2; exit 1; } || true
@@ -76,8 +89,14 @@ RUN CGO_ENABLED=1 CGO_LDFLAGS="/usr/local/lib/libpcap.a" \
 # is glibc; distroless would work but makes it harder for somebody to open a
 # shell and see what the thing is doing, which for a tool that watches a network
 # is a property worth keeping.
-FROM debian:bookworm-slim
-RUN apt-get update && apt-get install -y --no-install-recommends \
+FROM debian:trixie-slim AS runtime
+# The base image is rebuilt by Debian on its own schedule, and the packages it
+# ships with (perl, util-linux, openssl, zlib) collect CVEs between rebuilds that
+# nothing in this image ever executes but every scanner reports. Upgrading at
+# build time means each release carries whatever Debian had fixed that day,
+# whichever base image the builder happened to have cached.
+RUN apt-get update && apt-get upgrade -y --no-install-recommends \
+    && apt-get install -y --no-install-recommends \
       ca-certificates libcap2-bin \
     && rm -rf /var/lib/apt/lists/*
 

@@ -20,19 +20,33 @@ go 1.26.0
 //     dashboard's own server per govulncheck. Fixed in the standard library at
 //     go1.26.9; go1.27.2 is the current release carrying it. The module half of
 //     the same advisory is golang.org/x/net, raised below to v0.60.0.
+//   - Raised to go1.27.3 on 21 October 2026 for the crypto/x509 release of
+//     19 October, which rejects certificate chains through eight compromised
+//     intermediate CA keys. Reachable from every outbound HTTPS call here
+//     (dataset and blocklist downloads, RDAP, webhooks). The block is compiled
+//     in, so it only reaches users through a rebuild.
+//   - Raised to go1.27.4 on 11 November 2026 for GO-2026-6859: a header race
+//     in http.MaxBytesReader that crashes the HTTP/1 server, reachable through
+//     the dashboard's own server per govulncheck. golang.org/x/net goes to
+//     v0.62.0 in the same change for GO-2026-6860 and GO-2026-6866, which
+//     govulncheck finds unreachable here, and gopacket to v1.7.2 for the SCTP
+//     decoder bounds in GHSA-358w-w75h-x6rx. Capture decodes with recovery on,
+//     so that one was a decode error rather than a crash, but the fix is a
+//     patch release and costs nothing.
 //
-// The `go` directive is 1.26.0 because golang.org/x/net v0.60.0 requires it;
+// The `go` directive is 1.26.0 because golang.org/x/net v0.60.0 and later
+// require it;
 // the toolchain above is what actually builds.
-toolchain go1.27.2
+toolchain go1.27.4
 
 require (
 	github.com/coder/websocket v1.8.15
-	github.com/gopacket/gopacket v1.7.1
+	github.com/gopacket/gopacket v1.7.2
 	github.com/oschwald/maxminddb-golang/v2 v2.5.0
 	github.com/spf13/cobra v1.10.2
-	golang.org/x/crypto v0.57.0
-	golang.org/x/net v0.60.0
-	golang.org/x/sys v0.48.0
+	golang.org/x/crypto v0.58.0
+	golang.org/x/net v0.62.0
+	golang.org/x/sys v0.49.0
 	modernc.org/sqlite v1.57.0
 )
 

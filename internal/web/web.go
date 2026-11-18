@@ -50,7 +50,7 @@ func Handler() http.Handler {
 	files := http.FileServer(http.FS(sub))
 
 	// The entry document is built once per language at startup rather than per
-	// request. Twelve small documents, and it means a request cannot pay for the
+	// request. Sixteen small documents, and it means a request cannot pay for the
 	// regular expressions.
 	docs := indexDocs(sub)
 

@@ -78,7 +78,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest", "windows-latest"]' || '["ubuntu-latest", "macos-latest", "windows-latest"]') }}
+        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-24.04", "windows-latest"]' || '["ubuntu-24.04", "macos-latest", "windows-latest"]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -155,7 +155,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-latest"]' || '["ubuntu-latest", "macos-latest"]') }}
+        os: ${{ fromJSON(github.event_name == 'push' && '["ubuntu-24.04"]' || '["ubuntu-24.04", "macos-latest"]') }}
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -178,7 +178,7 @@ jobs:
   # need libpcap. This is the guarantee that Patrol Mode stays optional.
   cross-build:
     name: cross-build (cgo-free)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -277,12 +277,12 @@ jobs:
 
   frontend:
     name: frontend
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci --no-audit --no-fund
@@ -343,12 +343,12 @@ jobs:
   # of these were found by hand rather than by the build.
   hygiene:
     name: hygiene
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: '20'
+          node-version: '24'
 
       # An undefined CSS custom property with no fallback invalidates the whole
       # declaration, silently removing layout. This once deleted every gap in
@@ -376,7 +376,7 @@ jobs:
   # a newer toolchain, none visible without running this.
   security:
     name: security
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-go@v7
@@ -409,7 +409,7 @@ jobs:
     # always(), so the gate still reports when a job above it failed.
     if: always()
     needs: [test, patrol, cross-build, frontend, hygiene, security]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Fail if any job did not succeed
         if: contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled')

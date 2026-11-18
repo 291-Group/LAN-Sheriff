@@ -2,7 +2,9 @@ package cli
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io/fs"
 	"path/filepath"
 	"strconv"
 	"time"
@@ -37,6 +39,11 @@ func statusCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "status",
 		Short: "Report whether this machine is sharing anything, and with whom",
+		Long: `Report whether this machine is sharing observations with paired LAN Sheriff
+instances, which ones, and the pairing history. It reads the database directly,
+so it works whether or not LAN Sheriff is running.
+
+To ask whether a running instance is alive, use "lan-sheriff health".`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir, _ := cmd.Flags().GetString("data-dir")
 			if dir == "" {
@@ -51,9 +58,14 @@ func statusCmd() *cobra.Command {
 
 func runStatus(ctx context.Context, dir string) error {
 	path := filepath.Join(dir, "sheriff.db")
-	st, err := store.Open(path)
+	// Read-only: store.OpenReadOnly says why a second process must not open
+	// this database for writing.
+	st, err := store.OpenReadOnly(path)
 	if err != nil {
-		return fmt.Errorf("no readable database at %s: %w", path, err)
+		if errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("no database in %s: LAN Sheriff has not run with this data directory", dir)
+		}
+		return fmt.Errorf("could not open %s: %w", path, err)
 	}
 	defer st.Close()
 

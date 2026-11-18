@@ -218,6 +218,7 @@ func (s *Store) RunPruner(ctx context.Context, policy func() Retention) {
 			r := policy()
 			st, err := s.Prune(ctx, r)
 			if err != nil {
+				s.NoteErr("prune", err)
 				slog.Error("prune failed", "err", err)
 				continue
 			}

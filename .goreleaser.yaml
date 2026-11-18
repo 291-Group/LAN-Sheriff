@@ -342,10 +342,13 @@ homebrew_casks:
         # is refused by Gatekeeper with a dialog that says the binary is damaged.
         # It is not damaged, it is unsigned, and a user who has just installed
         # from a tap they added on purpose has already made that decision.
-        install: |
-          if system_command("/usr/bin/xattr", args: ["-h"]).exit_status == 0
-            system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/lan-sheriff"]
-          end
+        #
+        # install_steps, not install: Homebrew deprecated the raw-Ruby postflight
+        # stanza for a declarative one, and goreleaser 2.19 (22 October 2026)
+        # fails `goreleaser check` on the old key. The new form takes no
+        # conditionals, which is fine: xattr ships with every macOS.
+        install_steps: |
+          run "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "{{ .StagedPath }}/lan-sheriff"]
     # Uninstalling leaves the database alone, matching uninstall.sh. A monitor
     # that erases months of history because somebody changed how it was
     # installed would be a poor neighbour; `zap` is where Homebrew puts the

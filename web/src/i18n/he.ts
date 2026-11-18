@@ -287,6 +287,7 @@ export const he: Catalog = {
     newDomains: 'חדשים',
     flagged: 'מסומנים',
     flaggedOnly: 'מסומנים בלבד',
+    showReverse: 'הצג חיפושים הפוכים',
     noLookups: 'לא נרשמו שאילתות DNS בטווח הזה.',
     noLookupsHint:
       'DNS מוצפן הוא הסיבה הרגילה. דפדפנים ו-Windows שולחים שאילתות דרך HTTPS יותר ויותר, ואי אפשר לקרוא אותן בלי ליירט TLS, ו-LAN Sheriff לעולם אינו עושה זאת. גם VPN או פותר נפרד מוציאים את השאילתות מהתמונה.',
@@ -363,6 +364,8 @@ export const he: Catalog = {
     title: 'התצפיות אינן נשמרות',
     body: '‏LAN Sheriff רואה פעילות ברשת אך אינו יכול לשמור אותה, ולכן התצוגה אינה מעודכנת. השגיאה: {error}',
     failures: '{count} כתיבות שנכשלו ברצף',
+    damagedTitle: 'מסד הנתונים פגום',
+    damagedBody: 'חלק ממה ש-LAN Sheriff תיעד כבר אינו קריא, ולכן רשימת המבוקשים וחלק מהתצוגות הפסיקו להתעדכן. זה לא יתוקן מעצמו. כדי לתקן, עצרו את LAN Sheriff, העבירו את {files} אל מחוץ לתיקיית הנתונים והפעילו אותו מחדש: הוא יוצר מסד נתונים חדש, כך שההיסטוריה, שמות המכשירים וההגדרות יתחילו מחדש. נזק כזה בדרך כלל מעיד על אמצעי אחסון שכושל; אם זה כרטיס זיכרון, כדאי להחליף אותו. השגיאה הייתה: {error}',
   },
 
   deputize: {
@@ -408,7 +411,8 @@ export const he: Catalog = {
     subtitle: 'כיצד LAN Sheriff פועל, ומה הוא יכול ואינו יכול לראות',
     startTitle: 'להתחיל כאן',
     startMode: 'ההתקנה הזו פועלת כעת ב{mode}.',
-    startSees: 'מה היא רואה מכאן',
+    startOn: 'פועל עכשיו',
+    startOff: 'לא זמין כרגע',
     startDo: 'כדי לראות יותר',
     seeApps: 'איזו תוכנה במחשב הזה פתחה כל חיבור',
     seeDevices: 'מכשירים אחרים ברשת שלך',
@@ -644,6 +648,7 @@ export const he: Catalog = {
     e_first_contact: 'יצר קשר עם {org} בפעם הראשונה. המכשיר הזה פנה אל {known_orgs} ארגונים ב-{observed_days} ימים.',
     e_beaconing: 'התחבר אל {org} כל {interval}, {hits} פעמים, בסדירות של {regularity}%.',
     e_rare_destination: 'פנה אל {country}, המהווה {share_pct}% מהתעבורה ברשת הזו.',
+    e_rare_destination_many: 'פנה אל {countries} מדינות שהרשת הזו אינה משתמשת בהן בדרך כלל, ביניהן {examples}, המהוות יחד {share_pct}% מהתעבורה.',
     e_dga_domain: 'ביצע {names} שאילתות לשמות מתחם שנוצרו במכונה ואינם קיימים, כגון {example}.',
     e_port_scan_v: 'בדק {ports} פורטים ב-{target}, מתוכם {connected} השיבו.',
     e_port_scan_h: 'בדק את פורט {port} ב-{hosts} מכשירים, מתוכם {connected} השיבו.',

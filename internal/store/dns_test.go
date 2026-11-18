@@ -217,3 +217,60 @@ func TestLabelDNSAppliesToSubdomainsAndHistory(t *testing.T) {
 		t.Errorf("an existing label should not be replaced, got %q", got["already.example.com"])
 	}
 }
+
+// Reverse lookups are hidden from the feed unless asked for, and never from a
+// search, which is explicit. DNSOptions.IncludeReverse says why.
+func TestDNSFeedHidesReverseLookupsByDefault(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now()
+	err := s.WriteDNS(ctx, []types.DNSEvent{
+		dnsEvent("example.com", now, "dev-1", ""),
+		dnsEvent("10.1.168.192.in-addr.arpa", now, "dev-1", ""),
+		dnsEvent("1.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa", now, "dev-1", ""),
+	})
+	if err != nil {
+		t.Fatalf("WriteDNS: %v", err)
+	}
+	since := now.Add(-time.Hour)
+
+	feed, err := s.DNSEvents(ctx, DNSOptions{Since: since})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(feed) != 1 || feed[0].QName != "example.com" {
+		t.Errorf("default feed = %v, want only example.com", names(feed))
+	}
+
+	all, err := s.DNSEvents(ctx, DNSOptions{Since: since, IncludeReverse: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(all) != 3 {
+		t.Errorf("with IncludeReverse = %v, want all 3", names(all))
+	}
+
+	found, err := s.DNSEvents(ctx, DNSOptions{Since: since, Domain: "arpa"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(found) != 2 {
+		t.Errorf("searching for 'arpa' = %v, want both reverse lookups", names(found))
+	}
+
+	exported, err := s.DNSEvents(ctx, DNSOptions{Since: since, Export: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(exported) != 3 {
+		t.Errorf("export = %v, want everything; an export is the user's data, unfiltered", names(exported))
+	}
+}
+
+func names(events []types.DNSEvent) []string {
+	out := make([]string, 0, len(events))
+	for _, e := range events {
+		out = append(out, e.QName)
+	}
+	return out
+}

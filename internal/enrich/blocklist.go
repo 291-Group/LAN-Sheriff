@@ -46,16 +46,31 @@ type listSource struct {
 // Deliberately few. A comprehensive blocklist would label most of the internet,
 // which turns a useful signal into noise; these cover the categories a person
 // actually wants pointed out.
+//
+// **Malware first, because the first list to claim a domain wins** (see
+// Ensure). In the other order, a domain on both lists was labelled "ads" and
+// threat_list never saw it.
+//
+// **The malware list is HaGeZi's Threat Intelligence Feeds, the mini size.**
+// It was URLhaus until abuse.ch retired every keyless download in October
+// 2026; the old address answers 410 Gone, so new installs had no malware
+// list at all. HaGeZi aggregates URLhaus among many other feeds, needs no
+// key, and is served from GitHub rather than from a vendor's own server.
+// Mini rather than medium or full: about 15 MB in memory on a router instead
+// of 30 or more, and checked against the Tranco top sites it lists none of
+// the top thousand and one obscure domain in the top ten thousand, which the
+// medium list does not improve on. The name is new, so a URLhaus copy left on
+// disk is not read as this list.
 var defaultLists = []listSource{
+	{
+		name:     "hagezi-tif-mini",
+		url:      "https://raw.githubusercontent.com/hagezi/dns-blocklists/main/wildcard/tif.mini-onlydomains.txt",
+		category: CategoryMalware,
+	},
 	{
 		name:     "stevenblack-ads-trackers",
 		url:      "https://raw.githubusercontent.com/StevenBlack/hosts/master/data/StevenBlack/hosts",
 		category: CategoryAds,
-	},
-	{
-		name:     "urlhaus-malware",
-		url:      "https://urlhaus.abuse.ch/downloads/hostfile/",
-		category: CategoryMalware,
 	},
 }
 

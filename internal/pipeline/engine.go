@@ -18,6 +18,40 @@ import (
 // is merely still open produces one row update either way.
 const FlushInterval = 2 * time.Second
 
+// MaxFlushInterval is how far the flush backs off when writes keep failing.
+//
+// **A failed flush keeps its batch and tries again later, more slowly.**
+// Dropping the batch on failure was what made an SD card stall cost data
+// rather than time (store/retry.go has the install that showed it). Now the
+// batch stays staged, later observations merge into it, and the next attempt
+// waits longer than the last, up to this ceiling, so a stalled card is not
+// hammered every two seconds by a writer that cannot succeed yet.
+//
+// A flush is three writes, and each may wait busy_timeout (five seconds)
+// before it fails, so one failed flush holds the ingest goroutine for at most
+// about fifteen seconds. The store does not retry these writes, for that
+// reason: the batch is held here, and a retry would only lengthen the wait.
+const MaxFlushInterval = 30 * time.Second
+
+// Bounds on what is held while writes fail. Memory, not the medium, is the
+// scarce thing on a router, and a stall that outlives these bounds costs the
+// newest observations rather than the process. Flows and endpoints held from
+// a failed flush are merged with what arrived since, so those two can briefly
+// reach twice the bound; DNS is trimmed on merge.
+const (
+	maxPendingFlows     = 50000
+	maxPendingEndpoints = 50000
+	maxPendingDNS       = 10000
+)
+
+// storeWriter is what flush needs of the store, as an interface so a test can
+// make writes fail without a database that fails on demand.
+type storeWriter interface {
+	TouchEndpoints(ctx context.Context, seen map[string]store.EndpointSighting) error
+	WriteFlows(ctx context.Context, flows []types.Flow) error
+	WriteDNS(ctx context.Context, events []types.DNSEvent) error
+}
+
 // DomainLabeller categorizes a domain, e.g. as a tracker or telemetry endpoint.
 // Satisfied by enrich.Labeller; an interface so the pipeline does not depend on
 // the enrichment package.
@@ -28,7 +62,6 @@ type DomainLabeller interface {
 // Engine runs the capture sources and moves what they produce through the
 // normalizer into the store and out to connected dashboards.
 type Engine struct {
-	Store   *store.Store
 	Bus     *Bus
 	Sources []capture.Source
 	// Labeller is optional. Without one, lookups are recorded unlabelled.
@@ -36,12 +69,18 @@ type Engine struct {
 
 	norm   *Normalizer
 	events chan types.RawEvent
+	writer storeWriter
 
 	mu         sync.Mutex
 	pending    map[string]types.Flow          // flow key -> latest state
 	seenIPs    map[string]endpointSightingRec // ip -> most recent sighting
 	pendingDNS []types.DNSEvent
+	dropped    int // observations discarded since the last flush, for the log
 	health     healthTracker
+
+	// flushDelay is the current interval between flushes: FlushInterval while
+	// writes succeed, doubling towards MaxFlushInterval while they do not.
+	flushDelay time.Duration
 
 	// OnSighting receives device identity learned by a capture source, such as
 	// the hostname and vendor in a DHCP request. Set by the caller so the
@@ -60,13 +99,14 @@ type endpointSightingRec struct {
 // NewEngine builds the pipeline.
 func NewEngine(st *store.Store, bus *Bus, sources []capture.Source) *Engine {
 	return &Engine{
-		Store:   st,
-		Bus:     bus,
-		Sources: sources,
-		norm:    NewNormalizer(),
-		events:  make(chan types.RawEvent, 64),
-		pending: make(map[string]types.Flow),
-		seenIPs: make(map[string]endpointSightingRec),
+		Bus:        bus,
+		Sources:    sources,
+		writer:     st,
+		norm:       NewNormalizer(),
+		events:     make(chan types.RawEvent, 64),
+		pending:    make(map[string]types.Flow),
+		seenIPs:    make(map[string]endpointSightingRec),
+		flushDelay: FlushInterval,
 	}
 }
 
@@ -97,7 +137,7 @@ func (e *Engine) Run(ctx context.Context) error {
 		slog.Warn("no capture sources running; the dashboard will be empty")
 	}
 
-	flush := time.NewTicker(FlushInterval)
+	flush := time.NewTicker(e.flushDelay)
 	defer flush.Stop()
 
 	for {
@@ -111,7 +151,11 @@ func (e *Engine) Run(ctx context.Context) error {
 		case ev := <-e.events:
 			e.handle(ev)
 		case <-flush.C:
+			before := e.flushDelay
 			e.flush(ctx)
+			if e.flushDelay != before {
+				flush.Reset(e.flushDelay)
+			}
 		}
 	}
 }
@@ -171,8 +215,10 @@ func (e *Engine) recordDNS(ev *types.DNSEvent) {
 	defer e.mu.Unlock()
 	// Bound the buffer: a very busy resolver could otherwise outrun the flush
 	// interval and grow this without limit.
-	if len(e.pendingDNS) < 10000 {
+	if len(e.pendingDNS) < maxPendingDNS {
 		e.pendingDNS = append(e.pendingDNS, d)
+	} else {
+		e.dropped++
 	}
 }
 
@@ -182,13 +228,22 @@ func (e *Engine) record(fe FlowEvent) {
 	defer e.mu.Unlock()
 
 	f := fe.Flow
-	e.pending[storeKey(f)] = f
+	key := storeKey(f)
+	if _, known := e.pending[key]; known || len(e.pending) < maxPendingFlows {
+		e.pending[key] = f
+	} else {
+		e.dropped++
+	}
 
 	note := func(ip string, ts time.Time, internal bool) {
 		if _, err := netip.ParseAddr(ip); err != nil {
 			return
 		}
-		if prev, ok := e.seenIPs[ip]; ok && prev.seen.After(ts) {
+		prev, ok := e.seenIPs[ip]
+		if ok && prev.seen.After(ts) {
+			return
+		}
+		if !ok && len(e.seenIPs) >= maxPendingEndpoints {
 			return
 		}
 		e.seenIPs[ip] = endpointSightingRec{internal: internal, seen: ts}
@@ -233,44 +288,104 @@ func storeKey(f types.Flow) string {
 // flush writes staged changes. Endpoints are written before flows so that the
 // join behind the Watchtower query never sees a flow whose destination row does
 // not exist yet.
+//
+// A batch that fails to write is put back, beneath whatever arrived in the
+// meantime, and the next flush is scheduled further out. See MaxFlushInterval.
 func (e *Engine) flush(ctx context.Context) {
 	e.mu.Lock()
-	flows := make([]types.Flow, 0, len(e.pending))
-	for _, f := range e.pending {
-		flows = append(flows, f)
-	}
-	e.pending = make(map[string]types.Flow, len(e.pending))
+	pending := e.pending
+	e.pending = make(map[string]types.Flow, len(pending))
 	seen := e.seenIPs
 	e.seenIPs = make(map[string]endpointSightingRec, len(seen))
 	dnsEvents := e.pendingDNS
 	e.pendingDNS = nil
+	dropped := e.dropped
+	e.dropped = 0
 	e.mu.Unlock()
 
+	if dropped > 0 {
+		slog.Warn("observations discarded: buffer full",
+			"dropped", dropped)
+	}
+
+	failed := false
 	if len(seen) > 0 {
 		batch := make(map[string]store.EndpointSighting, len(seen))
 		for ip, s := range seen {
 			batch[ip] = store.Sighting(s.internal, s.seen)
 		}
-		if err := e.Store.TouchEndpoints(ctx, batch); err != nil {
-			slog.Warn("endpoint write failed", "err", err)
+		if err := e.writer.TouchEndpoints(ctx, batch); err != nil {
+			slog.Warn("endpoint write failed; holding the batch", "err", err, "held", len(seen))
+			failed = true
+			e.mu.Lock()
+			for ip, rec := range seen {
+				if cur, ok := e.seenIPs[ip]; !ok || rec.seen.After(cur.seen) {
+					e.seenIPs[ip] = rec
+				}
+			}
+			e.mu.Unlock()
 		}
 	}
-	if len(flows) > 0 {
-		if err := e.Store.WriteFlows(ctx, flows); err != nil {
+	if len(pending) > 0 {
+		flows := make([]types.Flow, 0, len(pending))
+		for _, f := range pending {
+			flows = append(flows, f)
+		}
+		if err := e.writer.WriteFlows(ctx, flows); err != nil {
 			e.health.failed(err)
+			failed = true
+			e.mu.Lock()
+			for key, f := range pending {
+				// A newer state of the same flow has arrived since; it wins.
+				if _, ok := e.pending[key]; !ok {
+					e.pending[key] = f
+				}
+			}
+			held := len(e.pending)
+			e.mu.Unlock()
 			// Error rather than warning, and repeated rather than rate-limited:
-			// this means observations are being discarded, which is the most
-			// serious thing that can go wrong short of not starting.
-			slog.Error("flows are not being recorded", "err", err,
-				"consecutive_failures", e.health.snapshot().Consecutive)
+			// observations are not reaching storage, which is the most serious
+			// thing that can go wrong short of not starting. They are held, not
+			// lost, for as long as memory allows.
+			slog.Error("flows are not being recorded; holding them", "err", err,
+				"held", held, "consecutive_failures", e.health.snapshot().Consecutive)
 		} else {
 			e.health.succeeded()
 		}
 	}
 	if len(dnsEvents) > 0 {
-		if err := e.Store.WriteDNS(ctx, dnsEvents); err != nil {
-			slog.Warn("dns write failed", "err", err)
+		if err := e.writer.WriteDNS(ctx, dnsEvents); err != nil {
+			slog.Warn("dns write failed; holding the batch", "err", err, "held", len(dnsEvents))
+			failed = true
+			e.mu.Lock()
+			// Oldest first, and the bound applies to the whole. What is held
+			// stays; it is the newest that give way, the same as at record
+			// time, so a long stall costs the end of the record and not a
+			// hole in the middle of it.
+			merged := append(dnsEvents, e.pendingDNS...)
+			if len(merged) > maxPendingDNS {
+				e.dropped += len(merged) - maxPendingDNS
+				merged = merged[:maxPendingDNS]
+			}
+			e.pendingDNS = merged
+			e.mu.Unlock()
 		}
+	}
+
+	e.adjustDelay(failed)
+}
+
+// adjustDelay backs the flush off while writes fail and restores it when they
+// succeed. The log line is written only when the delay changes, so a long
+// stall produces a handful of lines rather than one per attempt.
+func (e *Engine) adjustDelay(failed bool) {
+	switch {
+	case failed && e.flushDelay < MaxFlushInterval:
+		e.flushDelay = min(e.flushDelay*2, MaxFlushInterval)
+		slog.Warn("storage is slow; flushing less often", "every", e.flushDelay)
+	case !failed && e.flushDelay != FlushInterval:
+		slog.Info("storage recovered; flushing normally again")
+		e.flushDelay = FlushInterval
 	}
 }
 

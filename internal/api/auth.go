@@ -206,6 +206,15 @@ func (s *Server) RequireAuth(next http.Handler) http.Handler {
 			next.ServeHTTP(w, r)
 			return
 		}
+		// Liveness, for a supervisor. It says whether the process is up and
+		// whether writes are landing, and nothing about what was observed.
+		// A health check that needs the dashboard password is one nobody
+		// configures, and the alternative people reached for, opening the
+		// database from a second process, was worse than no check at all.
+		if r.URL.Path == "/api/health" && r.Method == http.MethodGet {
+			next.ServeHTTP(w, r)
+			return
+		}
 		if s.authed(r) {
 			next.ServeHTTP(w, r)
 			return

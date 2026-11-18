@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"sort"
+	"strings"
 	"time"
 )
 
@@ -125,67 +126,139 @@ ORDER BY r.last_seen DESC`,
 	}
 	defer rows.Close()
 
-	// One finding per device and country. The query returns a row per address,
-	// because the address is needed to check that the destination is reportable
-	// at all, but three addresses in one country is one thing worth saying, not
-	// three, and emitting duplicates would leave the store to clean up after the
-	// rule.
-	byKey := map[string]*Observation{}
+	// **One finding per device, however many countries are involved.**
+	//
+	// The first version keyed on device and country, which is right when a
+	// device reaches one unusual place and wrong when it reaches many: the
+	// first router install had a workstation, a torrent client by the look of
+	// it, talking to peers in 160 countries this network otherwise never
+	// touched, and the Wanted List showed 160 findings for it, one per
+	// country, each reading "0% of this network's traffic". A hundred and
+	// sixty identical sentences say less than one that says "160 countries".
+	// The query returns a row per address, because the address is needed to
+	// check the destination is reportable at all, and everything folds up from
+	// there: addresses into countries, countries into the device.
+	type country struct {
+		code, name, org string
+		last            time.Time
+		hits, total     int
+		addresses       int
+		share           float64
+	}
+	type device struct {
+		countries map[string]*country
+	}
+	byDevice := map[string]*device{}
+	var total int
 	for rows.Next() {
 		var (
-			deviceID, country, countryName, org, addr string
-			lastSeen                                  int64
-			hits, countryHits, total                  int
+			deviceID, code, countryName, org, addr string
+			lastSeen                               int64
+			hits, countryHits, n                   int
 		)
-		if err := rows.Scan(&deviceID, &country, &countryName, &org, &addr,
-			&lastSeen, &hits, &countryHits, &total); err != nil {
+		if err := rows.Scan(&deviceID, &code, &countryName, &org, &addr,
+			&lastSeen, &hits, &countryHits, &n); err != nil {
 			return nil, err
 		}
 		if deviceID == "" || !IsReportable(addr) {
 			continue
 		}
-
-		dedup := "rare_destination:" + deviceID + ":" + country
-		if existing, ok := byKey[dedup]; ok {
-			// Keep the most recent sighting, and note that more than one
-			// destination there was involved.
-			if at := time.Unix(lastSeen, 0); at.After(existing.At) {
-				existing.At = at
-				existing.Detail["org"] = org
-			}
-			existing.Detail["addresses"] = existing.Detail["addresses"].(int) + 1
-			continue
+		total = n
+		d, ok := byDevice[deviceID]
+		if !ok {
+			d = &device{countries: map[string]*country{}}
+			byDevice[deviceID] = d
 		}
-
-		share := float64(countryHits) / float64(total)
-		byKey[dedup] = &Observation{
-			Subject:     deviceID,
-			SubjectType: "device",
-			Score:       rareScore(share),
-			At:          time.Unix(lastSeen, 0),
-			Detail: map[string]any{
-				"country":      countryName,
-				"country_code": country,
-				"org":          org,
-				"addresses":    1,
-				"share_pct":    round2(share * 100),
-				"country_hits": countryHits,
-				"total_hits":   total,
-			},
-			Dedup: dedup,
+		c, ok := d.countries[code]
+		if !ok {
+			c = &country{code: code, name: countryName, org: org,
+				last: time.Unix(lastSeen, 0), hits: countryHits, total: n,
+				share: float64(countryHits) / float64(n)}
+			d.countries[code] = c
+		}
+		c.addresses++
+		// The most recent address names the organisation shown.
+		if at := time.Unix(lastSeen, 0); at.After(c.last) {
+			c.last = at
+			c.org = org
 		}
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
 
-	out := make([]Observation, 0, len(byKey))
-	for _, o := range byKey {
-		out = append(out, *o)
+	out := make([]Observation, 0, len(byDevice))
+	for deviceID, d := range byDevice {
+		// Most recent first, so the sentence leads with what just happened.
+		list := make([]*country, 0, len(d.countries))
+		for _, c := range d.countries {
+			list = append(list, c)
+		}
+		sort.Slice(list, func(i, j int) bool {
+			if !list[i].last.Equal(list[j].last) {
+				return list[i].last.After(list[j].last)
+			}
+			return list[i].code < list[j].code
+		})
+
+		var (
+			score     float64
+			share     float64
+			hits      int
+			addresses int
+			names     []string
+		)
+		for _, c := range list {
+			score = max(score, rareScore(c.share))
+			share += c.share
+			hits += c.hits
+			addresses += c.addresses
+			if len(names) < 3 {
+				names = append(names, c.name)
+			}
+		}
+		// Many rare places at once is more notable than one, but not without
+		// limit: a device reaching the whole world is one behaviour, not a
+		// hundred.
+		if n := len(list); n > 1 {
+			score = Clamp(score + 0.05*float64(min(n-1, 4)))
+		}
+		first := list[0]
+		out = append(out, Observation{
+			Subject:     deviceID,
+			SubjectType: "device",
+			Score:       score,
+			At:          first.last,
+			Detail: map[string]any{
+				"country":      first.name,
+				"country_code": first.code,
+				"org":          first.org,
+				"countries":    len(list),
+				"examples":     strings.Join(names, ", "),
+				"addresses":    addresses,
+				"share_pct":    sharePct(share),
+				"country_hits": hits,
+				"total_hits":   total,
+			},
+			Dedup: "rare_destination:" + deviceID,
+		})
 	}
 	// Stable order so a pass is reproducible.
 	sort.Slice(out, func(i, j int) bool { return out[i].Dedup < out[j].Dedup })
 	return out, nil
+}
+
+// sharePct is the share as a percentage for the sentence, to four decimal
+// places rather than two: these are by definition tiny, and two places
+// rendered every one of them as "0%", which read as a contradiction, a
+// destination reached, accounting for nothing. A share too small even for
+// four places shows as the smallest value that is not zero.
+func sharePct(share float64) float64 {
+	pct := float64(int(share*100*10000+0.5)) / 10000
+	if pct == 0 && share > 0 {
+		return 0.0001
+	}
+	return pct
 }
 
 // rareScore turns a share of the network's traffic into how notable it is.
@@ -198,10 +271,6 @@ func rareScore(share float64) float64 {
 		return 0
 	}
 	return Clamp(0.4 + 0.5*(1-share/rareShareCeiling))
-}
-
-func round2(v float64) float64 {
-	return float64(int(v*100+0.5)) / 100
 }
 
 // RareScoreForTest exposes the scoring curve so its shape can be checked

@@ -59,10 +59,12 @@ services:
       - LAN_SHERIFF_DATA_DIR=/data
 
     # Reports unhealthy if the API stops answering, which is what a supervisor
-    # should restart on. It deliberately does not call an endpoint that needs a
-    # password, so the check keeps working once one is set.
+    # should restart on. /api/health needs no password, so the check keeps
+    # working once one is set, and it touches nothing but a socket. If the
+    # port is changed, point the check at it:
+    #   test: ["CMD", "lan-sheriff", "health", "--url", "http://127.0.0.1:PORT/api/health"]
     healthcheck:
-      test: ["CMD", "lan-sheriff", "status", "--data-dir", "/data"]
+      test: ["CMD", "lan-sheriff", "health"]
       interval: 60s
       timeout: 10s
       retries: 3

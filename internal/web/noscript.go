@@ -14,7 +14,7 @@ import (
 //
 // A <noscript> block written into index.html would be one fixed language, and
 // English is the wrong guess for most of the world. Every other string in this
-// product is translated twelve ways and switched from the toolbar, but the
+// product is translated sixteen ways and switched from the toolbar, but the
 // toolbar is drawn by the script that just did not run. So the one screen whose
 // reader cannot possibly change the language is also the one screen that has to
 // get the language right without being asked.
@@ -68,8 +68,7 @@ type noscriptText struct {
 	Enable string // what happens if they do turn it on
 }
 
-// Twelve catalogues, the same twelve the dashboard carries. Canadian English in
-// the en entry, and no em dashes anywhere.
+// Sixteen catalogues, the same sixteen the dashboard carries.
 var noscriptTexts = map[string]noscriptText{
 	"en": {
 		Title:  "This dashboard needs JavaScript",
@@ -262,6 +261,70 @@ var noscriptTexts = map[string]noscriptText{
 		C4:     "אם מוגדרת סיסמה, היכנסו פעם אחת ושמרו את העוגייה, ואז העבירו אותה לקריאות שלמעלה.",
 		Note:   "החליפו את localhost בכתובת שאתם משתמשים בה, ואת 2911 ביציאה שלכם אם שיניתם אותה.",
 		Enable: "הפעלת JavaScript משנה את הדפדפן הזה בלבד. LAN Sheriff עצמו מתנהג אותו הדבר כך או כך.",
+	},
+	"it": {
+		Title:  "Questa dashboard ha bisogno di JavaScript",
+		Lede:   "Il tuo browser ha JavaScript disattivato, quindi la dashboard non può essere disegnata. LAN Sheriff non ha nessun problema: è ancora in esecuzione e continua a sorvegliare la rete.",
+		WhyH:   "Perché ne ha bisogno",
+		Why:    "La dashboard è una vista in diretta, non un documento: tabelle che si riordinano mentre le filtri, una mappa che si ridisegna e connessioni che compaiono man mano che si aprono. Tutto viene disegnato nel tuo browser a partire da dati che questo computer ha già, quindi non esiste una versione a pagine singole su cui ripiegare.",
+		SafeH:  "Cosa carica",
+		Safe:   "Solo file usciti da questo binario. Nessuna rete di distribuzione dei contenuti, nessun font web, nessuna immagine remota, nessuna analisi statistica e nessun codice di terze parti di alcun tipo. Il server lo impone invece di prometterlo: ogni risposta porta default-src 'self', che rende inerte uno script proveniente da qualsiasi altra parte anche se in qualche modo venisse iniettato.",
+		CLIH:   "Se preferisci lasciarlo disattivato",
+		CLI:    "Non sei escluso dai tuoi stessi dati. Gran parte di ciò che mostra la dashboard si può leggere invece da un terminale.",
+		C1:     "Cosa sta condividendo questo computer, e con chi. Non richiede password, privilegi né un server in esecuzione: legge direttamente il database.",
+		C2:     "Ogni destinazione vista, come foglio di calcolo.",
+		C3:     "Gli stessi dati in JSON, per uno script. Usa view=flows per le singole connessioni.",
+		C4:     "Se è impostata una password, accedi una volta e conserva il cookie, poi passalo alle chiamate qui sopra.",
+		Note:   "Sostituisci localhost con l'indirizzo che usi, e 2911 con la tua porta se l'hai cambiata.",
+		Enable: "Attivare JavaScript cambia solo questo browser. LAN Sheriff si comporta allo stesso modo in entrambi i casi.",
+	},
+	"ko": {
+		Title:  "이 대시보드에는 JavaScript가 필요합니다",
+		Lede:   "브라우저에서 JavaScript가 꺼져 있어 대시보드를 그릴 수 없습니다. LAN Sheriff에는 아무 문제가 없습니다. 여전히 실행 중이며 계속 네트워크를 지켜보고 있습니다.",
+		WhyH:   "필요한 이유",
+		Why:    "대시보드는 문서가 아니라 실시간 화면입니다. 필터링할 때마다 다시 정렬되는 표, 다시 그려지는 지도, 열리는 즉시 나타나는 연결로 이루어져 있습니다. 이 모든 것은 이 기기가 이미 가진 데이터로 브라우저 안에서 그려지므로, 페이지 단위로 대신 보여 줄 버전이 없습니다.",
+		SafeH:  "불러오는 것",
+		Safe:   "이 실행 파일에서 나온 파일만 불러옵니다. 콘텐츠 전송 네트워크도, 웹 글꼴도, 외부 이미지도, 사용 분석도, 어떤 종류의 제3자 코드도 없습니다. 서버는 이를 약속만 하는 것이 아니라 강제합니다. 모든 응답에 default-src 'self'가 붙어 있어, 혹시 다른 곳의 스크립트가 주입되더라도 실행되지 않습니다.",
+		CLIH:   "꺼 둔 채로 쓰고 싶다면",
+		CLI:    "자신의 데이터에서 막히는 것은 아닙니다. 대시보드가 보여 주는 내용의 대부분은 터미널에서도 읽을 수 있습니다.",
+		C1:     "이 기기가 무엇을 누구와 공유하고 있는지 보여 줍니다. 비밀번호도, 권한도, 실행 중인 서버도 필요 없으며, 데이터베이스를 직접 읽습니다.",
+		C2:     "확인된 모든 목적지를 스프레드시트 형식으로 보여 줍니다.",
+		C3:     "같은 데이터를 스크립트용 JSON으로 보여 줍니다. 개별 연결은 view=flows를 사용하세요.",
+		C4:     "비밀번호가 설정되어 있다면 한 번 로그인해 쿠키를 저장한 다음, 위의 호출에 그 쿠키를 함께 넘기세요.",
+		Note:   "localhost는 사용하는 주소로, 포트를 바꿨다면 2911도 사용하는 포트로 바꾸세요.",
+		Enable: "JavaScript를 켜도 바뀌는 것은 이 브라우저뿐입니다. LAN Sheriff 자체는 어느 쪽이든 똑같이 동작합니다.",
+	},
+	"pl": {
+		Title:  "Ten panel wymaga JavaScript",
+		Lede:   "W twojej przeglądarce JavaScript jest wyłączony, więc panel nie może się narysować. Z LAN Sheriff wszystko jest w porządku: nadal działa i nadal obserwuje sieć.",
+		WhyH:   "Dlaczego jest potrzebny",
+		Why:    "Panel to widok na żywo, a nie dokument: tabele, które sortują się na nowo podczas filtrowania, mapa, która się przerysowuje, i połączenia pojawiające się w chwili otwarcia. Wszystko to jest rysowane w przeglądarce z danych, które ten komputer już ma, więc nie istnieje wersja strona po stronie, do której można by wrócić.",
+		SafeH:  "Co jest wczytywane",
+		Safe:   "Tylko pliki pochodzące z tego pliku binarnego. Żadnej sieci dostarczania treści, żadnych zewnętrznych czcionek, żadnych zewnętrznych obrazów, żadnej analityki i żadnego kodu stron trzecich. Serwer tego nie obiecuje, tylko to wymusza: każda odpowiedź zawiera default-src 'self', przez co skrypt z innego źródła pozostaje bezczynny, nawet gdyby jakoś został wstrzyknięty.",
+		CLIH:   "Jeśli wolisz go nie włączać",
+		CLI:    "Nie tracisz dostępu do własnych danych. Większość tego, co pokazuje panel, można odczytać w terminalu.",
+		C1:     "Co ten komputer udostępnia i komu. Nie wymaga hasła, uprawnień ani działającego serwera: odczytuje bazę danych bezpośrednio.",
+		C2:     "Każdy widziany cel, jako arkusz kalkulacyjny.",
+		C3:     "Te same dane w formacie JSON, dla skryptu. Użyj view=flows, aby dostać pojedyncze połączenia.",
+		C4:     "Jeśli ustawiono hasło, zaloguj się raz, zachowaj plik cookie i przekazuj go do powyższych wywołań.",
+		Note:   "Zastąp localhost adresem, którego używasz, a 2911 swoim portem, jeśli go zmieniono.",
+		Enable: "Włączenie JavaScript zmienia tylko tę przeglądarkę. Sam LAN Sheriff działa tak samo w obu przypadkach.",
+	},
+	"uk": {
+		Title:  "Цій панелі потрібен JavaScript",
+		Lede:   "У вашому браузері вимкнено JavaScript, тому панель не може відобразитися. З LAN Sheriff усе гаразд: програма працює і далі стежить за мережею.",
+		WhyH:   "Навіщо він потрібен",
+		Why:    "Панель є живим поданням, а не документом: таблиці пересортовуються, коли ви їх фільтруєте, мапа перемальовується, а з'єднання з'являються, щойно відкриваються. Усе це малюється у вашому браузері з даних, які вже зберігаються на цьому комп'ютері, тому посторінкової версії, на яку можна було б перейти, немає.",
+		SafeH:  "Що завантажується",
+		Safe:   "Лише файли, що містяться в цьому виконуваному файлі. Жодної мережі доставки контенту, жодних вебшрифтів, жодних віддалених зображень, жодної аналітики і жодного стороннього коду. Сервер це не обіцяє, а забезпечує: кожна відповідь містить default-src 'self', тож скрипт з будь-якого іншого джерела не спрацює, навіть якщо його якось вбудують.",
+		CLIH:   "Якщо ви волієте не вмикати його",
+		CLI:    "Доступ до власних даних у вас залишається. Більшість того, що показує панель, можна прочитати з термінала.",
+		C1:     "Чим цей комп'ютер ділиться і з ким. Не потрібні ні пароль, ні привілеї, ні запущений сервер: команда читає базу даних безпосередньо.",
+		C2:     "Усі помічені адресати у вигляді таблиці.",
+		C3:     "Ті самі дані в JSON, для скрипта. Для окремих з'єднань використовуйте view=flows.",
+		C4:     "Якщо встановлено пароль, увійдіть один раз, збережіть cookie і передавайте його у виклики вище.",
+		Note:   "Замініть localhost на адресу, якою ви користуєтеся, а 2911 на свій порт, якщо ви його змінювали.",
+		Enable: "Увімкнення JavaScript змінює лише цей браузер. Сам LAN Sheriff працює однаково в обох випадках.",
 	},
 }
 

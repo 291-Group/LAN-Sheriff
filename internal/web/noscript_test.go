@@ -134,6 +134,10 @@ func TestPickLang(t *testing.T) {
 		"garbage;;;q=x,hi":          "hi", // malformed, must not panic or win
 		"zh-Hant":                   "zh",
 		"bn-BD;q=1.0":               "bn",
+		"it-IT,it;q=0.9":            "it",
+		"ko-KR":                     "ko",
+		"pl-PL, en;q=0.5":           "pl",
+		"uk-UA,uk;q=0.9,ru;q=0.8":   "uk",
 	} {
 		if got := pickLang(header); got != want {
 			t.Errorf("pickLang(%q) = %q, want %q", header, got, want)
@@ -155,9 +159,9 @@ func TestNoCatalogueHasAHole(t *testing.T) {
 	}
 }
 
-// House style, enforced rather than remembered: no em dashes in anything that
-// ships, and the untranslated product name spelled the one way.
-func TestHouseStyle(t *testing.T) {
+// The page's text uses plain hyphens only, and spells the untranslated
+// product name one way.
+func TestNoscriptText(t *testing.T) {
 	for lang, txt := range noscriptTexts {
 		v := reflect.ValueOf(txt)
 		for i := 0; i < v.NumField(); i++ {

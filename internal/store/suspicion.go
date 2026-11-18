@@ -30,6 +30,14 @@ func (s *Store) RecordObservations(
 	if len(obs) == 0 {
 		return nil
 	}
+	return s.retryWrite(ctx, "findings", func() error {
+		return s.recordObservations(ctx, rule, weight, obs)
+	})
+}
+
+func (s *Store) recordObservations(
+	ctx context.Context, rule string, weight float64, obs []suspicion.Observation,
+) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -169,14 +177,19 @@ LIMIT ?`, FindingOpen, limit)
 // becomes a list of everything that ever happened, which is the same as a list
 // of nothing.
 func (s *Store) ExpireFindings(ctx context.Context, now time.Time, after time.Duration) (int64, error) {
-	res, err := s.db.ExecContext(ctx, `
+	var n int64
+	err := s.retryWrite(ctx, "expire findings", func() error {
+		res, err := s.db.ExecContext(ctx, `
 UPDATE findings SET status = ?
 WHERE status = ? AND MAX(ts, last_seen) < ?`,
-		FindingCleared, FindingOpen, now.Add(-after).Unix())
-	if err != nil {
-		return 0, err
-	}
-	return res.RowsAffected()
+			FindingCleared, FindingOpen, now.Add(-after).Unix())
+		if err != nil {
+			return err
+		}
+		n, err = res.RowsAffected()
+		return err
+	})
+	return n, err
 }
 
 // FindingTTL is how long a finding stays open without being seen again.

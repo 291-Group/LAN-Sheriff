@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -605,5 +606,70 @@ func TestEmptyInstallNeverSerialisesNullCollections(t *testing.T) {
 				t.Errorf("%s: %q is not an array: %s", tc.path, f, raw)
 			}
 		}
+	}
+}
+
+// The health endpoint is for a supervisor, which has no session and never
+// will. It says whether the process is up and whether writes are landing, and
+// nothing about what was observed.
+func TestHealthNeedsNoPassword(t *testing.T) {
+	_, h := newServer(t, testPassword)
+	rec := get(t, h, "/api/health")
+	if rec.Code != http.StatusOK {
+		t.Fatalf("/api/health returned %d without a session, want 200", rec.Code)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+		t.Fatalf("health body: %v", err)
+	}
+	if _, ok := body["tracked"]; !ok {
+		t.Errorf("health body %v lacks 'tracked'", body)
+	}
+	for _, k := range []string{"devices", "flows", "endpoints", "events"} {
+		if _, leaked := body[k]; leaked {
+			t.Errorf("health body carries %q, which is data", k)
+		}
+	}
+}
+
+// A damaged database is reported by the health endpoint, separately from
+// ingest, and without saying where the data lives: the endpoint needs no
+// login.
+func TestHealthReportsDamagedDatabase(t *testing.T) {
+	s, h := newServer(t, testPassword)
+
+	read := func() map[string]any {
+		t.Helper()
+		rec := get(t, h, "/api/health")
+		if rec.Code != http.StatusOK {
+			t.Fatalf("/api/health returned %d", rec.Code)
+		}
+		var body map[string]any
+		if err := json.Unmarshal(rec.Body.Bytes(), &body); err != nil {
+			t.Fatalf("health body: %v", err)
+		}
+		return body
+	}
+
+	storage, _ := read()["storage"].(map[string]any)
+	if storage == nil || storage["ok"] != true {
+		t.Fatalf("healthy store: storage = %v, want ok true", storage)
+	}
+
+	s.Store.NoteErr("suspicion rules", errors.New("threat list query: database disk image is malformed (11)"))
+	rec := get(t, h, "/api/health")
+	if d := s.Store.Damage(); d == nil || strings.Contains(rec.Body.String(), d.Path) || strings.Contains(rec.Body.String(), `"path"`) {
+		t.Errorf("health body reveals the data path: %s", rec.Body.String())
+	}
+	storage, _ = read()["storage"].(map[string]any)
+	if storage == nil || storage["ok"] != false {
+		t.Fatalf("damaged store: storage = %v, want ok false", storage)
+	}
+	damage, _ := storage["damage"].(map[string]any)
+	if damage["file"] != "test.db" || damage["source"] != "suspicion rules" {
+		t.Errorf("damage = %v", damage)
+	}
+	if r, _ := storage["remedy"].(string); !strings.Contains(r, "the data directory") {
+		t.Errorf("remedy = %q", r)
 	}
 }

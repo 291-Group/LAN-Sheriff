@@ -287,6 +287,7 @@ export const de: Catalog = {
     newDomains: 'neu',
     flagged: 'markiert',
     flaggedOnly: 'Nur markierte',
+    showReverse: 'Reverse-Lookups anzeigen',
     noLookups: 'In diesem Zeitraum wurden keine DNS-Abfragen aufgezeichnet.',
     noLookupsHint:
       'Verschlüsseltes DNS ist der übliche Grund. Browser und Windows senden Anfragen zunehmend über HTTPS, was sich ohne Aufbrechen von TLS nicht lesen lässt, und LAN Sheriff tut das nie. Auch ein VPN oder ein separater Resolver verlagert Anfragen aus dem Blickfeld.',
@@ -363,6 +364,8 @@ export const de: Catalog = {
     title: 'Beobachtungen werden nicht gespeichert',
     body: 'LAN Sheriff sieht Netzwerkaktivität, kann sie aber nicht speichern, daher ist diese Ansicht veraltet. Der Fehler war: {error}',
     failures: '{count} fehlgeschlagene Schreibvorgänge in Folge',
+    damagedTitle: 'Die Datenbank ist beschädigt',
+    damagedBody: 'Ein Teil dessen, was LAN Sheriff aufgezeichnet hat, ist nicht mehr lesbar, daher werden die Fahndungsliste und einige Ansichten nicht mehr aktualisiert. Das behebt sich nicht von selbst. Zur Behebung LAN Sheriff beenden, {files} aus dem Datenordner verschieben und neu starten: Es legt eine neue Datenbank an, Verlauf, Gerätenamen und Einstellungen beginnen also von vorn. Ein solcher Schaden bedeutet meist, dass der Speicher ausfällt; eine SD-Karte sollte dann ersetzt werden. Der Fehler war: {error}',
   },
 
   deputize: {
@@ -408,7 +411,8 @@ export const de: Catalog = {
     subtitle: 'Wie LAN Sheriff arbeitet und was es sehen kann und was nicht',
     startTitle: 'Hier anfangen',
     startMode: 'Diese Installation läuft gerade im {mode}.',
-    startSees: 'Was sie von hier aus sieht',
+    startOn: 'Funktioniert jetzt',
+    startOff: 'Derzeit nicht verfügbar',
     startDo: 'Um mehr zu sehen',
     seeApps: 'Welche Anwendung auf diesem Rechner jede Verbindung geöffnet hat',
     seeDevices: 'Andere Geräte in Ihrem Netzwerk',
@@ -644,6 +648,7 @@ export const de: Catalog = {
     e_first_contact: 'Hat {org} zum ersten Mal kontaktiert. Dieses Gerät hat in {observed_days} Tagen {known_orgs} Organisationen erreicht.',
     e_beaconing: 'Hat sich alle {interval} mit {org} verbunden, {hits} mal, mit {regularity} % Regelmäßigkeit.',
     e_rare_destination: 'Hat {country} erreicht, worauf {share_pct} % des Verkehrs dieses Netzwerks entfallen.',
+    e_rare_destination_many: 'Hat {countries} Länder erreicht, die dieses Netzwerk sonst nie nutzt, darunter {examples}; zusammen entfallen darauf {share_pct} % des Verkehrs.',
     e_dga_domain: 'Hat {names} Anfragen an maschinell erzeugte Domainnamen gestellt, die nicht existieren, etwa {example}.',
     e_port_scan_v: 'Hat {ports} Ports auf {target} geprüft, davon haben {connected} geantwortet.',
     e_port_scan_h: 'Hat Port {port} auf {hosts} Geräten geprüft, davon haben {connected} geantwortet.',

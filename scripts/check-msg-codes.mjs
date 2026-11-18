@@ -40,7 +40,8 @@ if (codes.length === 0) {
 }
 
 let bad = 0
-for (const file of readdirSync(i18n).filter((f) => f.endsWith('.ts') && f !== 'index.ts').sort()) {
+const files = readdirSync(i18n).filter((f) => f.endsWith('.ts') && f !== 'index.ts').sort()
+for (const file of files) {
   const lang = file.slice(0, -3)
   const src = readFileSync(join(i18n, file), 'utf8')
 
@@ -70,4 +71,6 @@ for (const file of readdirSync(i18n).filter((f) => f.endsWith('.ts') && f !== 'i
 }
 
 if (bad) process.exit(1)
-console.log(`message codes: all ${codes.length} resolve in all 12 catalogues`)
+// Counted rather than written, so adding a language cannot leave this line
+// reporting a number that is no longer true.
+console.log(`message codes: all ${codes.length} resolve in all ${files.length} catalogues`)

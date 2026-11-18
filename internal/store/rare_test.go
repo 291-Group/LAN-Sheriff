@@ -119,8 +119,8 @@ func TestRareDestinationWaitsForEnoughHistory(t *testing.T) {
 	}
 }
 
-// One country and one device is one finding, however many addresses are involved.
-func TestRareDestinationGroupsByCountry(t *testing.T) {
+// One device is one finding, however many addresses are involved.
+func TestRareDestinationGroupsByDevice(t *testing.T) {
 	s := newTestStore(t)
 	now := time.Now()
 	// Enough history that three connections are still rare: at 2,000 flows they
@@ -141,6 +141,40 @@ func TestRareDestinationGroupsByCountry(t *testing.T) {
 	}
 	if len(seen) != 1 {
 		t.Errorf("three addresses in one country produced %d distinct findings", len(seen))
+	}
+}
+
+// Many rare countries from one device is still one finding, which says how
+// many; rare_destination.go has the install that showed why.
+func TestRareDestinationOneFindingPerDevice(t *testing.T) {
+	s := newTestStore(t)
+	now := time.Now()
+	_, add := seedShape(t, s, now, 6000)
+
+	add("GA", "Peer One", "198.51.100.97", now.Add(-3*time.Minute))
+	add("GU", "Peer Two", "198.51.100.98", now.Add(-2*time.Minute))
+	add("CV", "Peer Three", "198.51.100.99", now.Add(-time.Minute))
+
+	got := runRare(t, s, now)
+	if len(got) != 1 {
+		t.Fatalf("three countries from one device produced %d findings, want 1: %+v", len(got), got)
+	}
+	o := got[0]
+	if n, _ := o.Detail["countries"].(int); n != 3 {
+		t.Errorf("countries = %v, want 3", o.Detail["countries"])
+	}
+	// Most recent first, so the sentence leads with what just happened.
+	if ex, _ := o.Detail["examples"].(string); ex != "CV-land, GU-land, GA-land" {
+		t.Errorf("examples = %q, want the three names, most recent first", ex)
+	}
+	if o.Detail["country_code"] != "CV" {
+		t.Errorf("country_code = %v, want the most recent, CV", o.Detail["country_code"])
+	}
+	if share, _ := o.Detail["share_pct"].(float64); share <= 0 {
+		t.Errorf("share_pct = %v, want a positive percentage, never a 0 that reads as nothing", share)
+	}
+	if o.Dedup != "rare_destination:"+o.Subject {
+		t.Errorf("dedup = %q, want one key per device", o.Dedup)
 	}
 }
 
@@ -285,5 +319,70 @@ func TestRareDestinationDoesNotTrustATinySample(t *testing.T) {
 	}
 	if !found {
 		t.Error("a handful of connections should not qualify an operator as distributed")
+	}
+}
+
+// Migration 18 re-keys one per-country finding per device to the per-device
+// key, so the rule's next pass updates it rather than announcing it anew, and
+// clears the rest. A device that already has the per-device key keeps it.
+func TestMigration18CarriesRareFindingsToThePerDeviceKey(t *testing.T) {
+	s := newTestStore(t)
+	ctx := context.Background()
+	now := time.Now()
+	obs := func(subject, dedup string) suspicion.Observation {
+		return suspicion.Observation{
+			Subject: subject, SubjectType: "device", Score: 0.6, At: now,
+			Detail: map[string]any{"country": "x"}, Dedup: dedup,
+		}
+	}
+	if err := s.RecordObservations(ctx, "rare_destination", 0.5, []suspicion.Observation{
+		obs("dev-1", "rare_destination:dev-1:GA"),
+		obs("dev-1", "rare_destination:dev-1:GU"),
+		obs("dev-1", "rare_destination:dev-1"),
+		obs("dev-2", "rare_destination:dev-2:CV"),
+		obs("dev-2", "rare_destination:dev-2:GU"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.ExecContext(ctx, migrations[17]); err != nil {
+		t.Fatalf("migration 18: %v", err)
+	}
+	rows, err := s.db.QueryContext(ctx, `SELECT dedup, status FROM findings ORDER BY dedup`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	got := map[string]string{}
+	for rows.Next() {
+		var d, st string
+		if err := rows.Scan(&d, &st); err != nil {
+			t.Fatal(err)
+		}
+		got[d] = st
+	}
+	want := map[string]string{
+		"rare_destination:dev-1:GA": FindingCleared,
+		"rare_destination:dev-1:GU": FindingCleared,
+		"rare_destination:dev-1":    FindingOpen,
+		"rare_destination:dev-2":    FindingOpen, // was dev-2:CV, the earlier of the two
+		"rare_destination:dev-2:GU": FindingCleared,
+	}
+	for k, v := range want {
+		if got[k] != v {
+			t.Errorf("%s: status %q, want %q", k, got[k], v)
+		}
+	}
+	if _, still := got["rare_destination:dev-2:CV"]; still {
+		t.Error("rare_destination:dev-2:CV should have been re-keyed, not kept")
+	}
+	// The re-keyed row is updated in place by the next pass, not announced.
+	if err := s.RecordObservations(ctx, "rare_destination", 0.5, []suspicion.Observation{
+		obs("dev-2", "rare_destination:dev-2"),
+	}); err != nil {
+		t.Fatal(err)
+	}
+	var n int
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM findings WHERE subject = 'dev-2' AND status = 'open'`).Scan(&n); err != nil || n != 1 {
+		t.Errorf("open findings for dev-2 after the next pass = %d (%v), want 1", n, err)
 	}
 }

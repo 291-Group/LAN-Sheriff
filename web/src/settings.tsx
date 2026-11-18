@@ -78,9 +78,9 @@ export function SettingsPanel({ onClose, onWiped }: { onClose: () => void; onWip
   }, [onClose])
 
   return (
-    <div class="modal-backdrop" onClick={onClose}>
-      <div class="modal" onClick={(e) => e.stopPropagation()}>
-        <div class="modal-head">
+    <div class="sheriff-dialog-backdrop" onClick={onClose}>
+      <div class="sheriff-dialog" onClick={(e) => e.stopPropagation()}>
+        <div class="sheriff-dialog-head">
           <h2>{t.settings.title}</h2>
           <button class="close" onClick={onClose} title={t.actions.close}>×</button>
         </div>
@@ -93,7 +93,7 @@ export function SettingsPanel({ onClose, onWiped }: { onClose: () => void; onWip
 
         {data && (
           <>
-            <p class="modal-note">{t.settings.intro}</p>
+            <p class="sheriff-dialog-note">{t.settings.intro}</p>
 
             <label class="field">
               <span>{t.settings.rawHours}</span>
@@ -119,7 +119,7 @@ export function SettingsPanel({ onClose, onWiped }: { onClose: () => void; onWip
               />
             </label>
 
-            <dl class="modal-facts">
+            <dl class="sheriff-dialog-facts">
               <dt>{t.settings.currentlyUsing}</dt><dd>{fmtBytes(data.db_bytes)}</dd>
               <dt>{t.settings.storedIn}</dt><dd>{data.data_dir}</dd>
             </dl>
@@ -204,9 +204,9 @@ function CapturePanel() {
           and that is the sentence that was missing. */}
       {data.interfaces.some((i) => !i.active && i.recommended) &&
         data.interfaces.some((i) => i.active) && (
-          <p class="modal-note">{t.settings.captureOverridden}</p>
+          <p class="sheriff-dialog-note">{t.settings.captureOverridden}</p>
         )}
-      <p class="modal-note">{t.settings.captureChange}</p>
+      <p class="sheriff-dialog-note">{t.settings.captureChange}</p>
     </div>
   )
 }

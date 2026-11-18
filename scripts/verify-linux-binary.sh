@@ -98,7 +98,7 @@ fi
 #
 # Read out of the binary rather than from the environment, because the
 # environment is what lied last time.
-want=${WANT_GO:-go1.25.14}
+want=${WANT_GO:-go1.27.4}
 if got=$(go version -m "$BIN" 2>/dev/null | awk 'NR==1 {print $2}') && [ -n "$got" ]; then
   if [ "$got" = "$want" ]; then
     pass "built with $got"

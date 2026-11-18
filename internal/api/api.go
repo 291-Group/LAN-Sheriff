@@ -432,6 +432,19 @@ func (s *Server) handleHealth(w http.ResponseWriter, r *http.Request) {
 	if s.IngestHealth != nil {
 		resp["ingest"] = s.IngestHealth()
 	}
+	// Damage is reported separately from ingest: writes can keep succeeding
+	// on healthy pages while everything that reads the damaged ones fails,
+	// which is exactly how it went unnoticed the first time. See
+	// store/integrity.go.
+	if s.Store != nil {
+		storage := map[string]any{"ok": true}
+		if d := s.Store.Damage(); d != nil {
+			storage["ok"] = false
+			storage["damage"] = d
+			storage["remedy"] = store.Remedy(d.File)
+		}
+		resp["storage"] = storage
+	}
 	writeJSON(w, http.StatusOK, resp)
 }
 

@@ -313,6 +313,7 @@ export const en = {
     newDomains: 'new',
     flagged: 'flagged',
     flaggedOnly: 'Flagged only',
+    showReverse: 'Show reverse lookups',
     noLookups: 'No DNS lookups recorded in this period.',
     noLookupsHint:
       'Encrypted DNS is the usual reason. Browsers and Windows increasingly send lookups over HTTPS, which cannot be read without intercepting TLS, and LAN Sheriff never does that. A VPN or a separate resolver also moves lookups out of view.',
@@ -391,6 +392,8 @@ export const en = {
     title: 'Observations are not being recorded',
     body: 'LAN Sheriff can see network activity but cannot save it, so this view is out of date. The error was: {error}',
     failures: '{count} failed writes in a row',
+    damagedTitle: 'The database is damaged',
+    damagedBody: 'Part of what LAN Sheriff recorded can no longer be read, so the Wanted List and some views have stopped updating. This does not fix itself. To fix it, stop LAN Sheriff, move {files} out of the data folder, and start it again: it begins a new database, so history, device names and settings start over. Damage like this usually means the storage is failing; on an SD card, consider replacing it. The error was: {error}',
   },
 
   deputize: {
@@ -436,7 +439,8 @@ export const en = {
     subtitle: 'How LAN Sheriff works, and what it can and cannot see',
     startTitle: 'Start here',
     startMode: 'This install is running in {mode} right now.',
-    startSees: 'What it can see from here',
+    startOn: 'Working now',
+    startOff: 'Not available right now',
     startDo: 'To see more',
     seeApps: 'Which application on this machine opened each connection',
     seeDevices: 'Other devices on your network',
@@ -640,6 +644,7 @@ export const en = {
     e_first_contact: 'Reached {org} for the first time. This device has contacted {known_orgs} organizations in {observed_days} days.',
     e_beaconing: 'Connected to {org} every {interval}, {hits} times, at {regularity}% regularity.',
     e_rare_destination: 'Reached {country}, which accounts for {share_pct}% of this network\'s traffic.',
+    e_rare_destination_many: 'Reached {countries} countries this network otherwise never uses, {examples} among them, which together account for {share_pct}% of its traffic.',
     e_dga_domain: 'Made {names} lookups for machine-generated domain names that do not exist, such as {example}.',
     e_port_scan_v: 'Probed {ports} ports on {target}, of which {connected} answered.',
     e_port_scan_h: 'Probed port {port} on {hosts} devices, of which {connected} answered.',

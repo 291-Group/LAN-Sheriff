@@ -1003,9 +1003,9 @@ main {
 .chip.clickable:hover { border-color: var(--star); color: var(--text); }
 .ep-flag.clickable:hover { color: var(--text); }
 
-/* ---------- modal ---------- */
+/* ---------- sheriff-dialog ---------- */
 
-.modal-backdrop {
+.sheriff-dialog-backdrop {
   /* Fixed, not absolute.
      Absolute positioning resolves against the nearest positioned ancestor,
      which is <main>, so the dialog centred inside the content column and sat
@@ -1020,7 +1020,7 @@ main {
   backdrop-filter: blur(3px);
   -webkit-backdrop-filter: blur(3px);
 }
-.modal {
+.sheriff-dialog {
   width: min(440px, 100%);
   max-height: 100%;
   overflow-y: auto;
@@ -1042,14 +1042,14 @@ main {
   border-radius: 18px;
   box-shadow: var(--shadow);
 }
-.modal-head { display: flex; align-items: center; margin-bottom: 6px; }
-.modal-head h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.02em; }
+.sheriff-dialog-head { display: flex; align-items: center; margin-bottom: 6px; }
+.sheriff-dialog-head h2 { margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.02em; }
 /* The close button keeps a comfortable click target, and is pulled outward by
    exactly the padding that target adds, so the × itself lands on the same
    25px line as the heading text opposite it. Without this the box edge was
    flush and the glyph sat 6px further in, which reads as more padding on the
    right than the left even though every measured value is symmetric. */
-.modal-head .close {
+.sheriff-dialog-head .close {
   margin-inline-start: auto;
   margin-inline-end: -6px;
   padding: 1px 6px;
@@ -1060,10 +1060,10 @@ main {
   line-height: 1;
   cursor: pointer;
 }
-.modal-note { margin: 0 0 16px; font-size: 12.5px; line-height: 1.6; color: var(--text-dim); }
-.modal-facts { margin: 14px 0 16px; display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; font-size: 11.5px; }
-.modal-facts dt { color: var(--text-faint); }
-.modal-facts dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
+.sheriff-dialog-note { margin: 0 0 16px; font-size: 12.5px; line-height: 1.6; color: var(--text-dim); }
+.sheriff-dialog-facts { margin: 14px 0 16px; display: grid; grid-template-columns: 110px 1fr; gap: 4px 10px; font-size: 11.5px; }
+.sheriff-dialog-facts dt { color: var(--text-faint); }
+.sheriff-dialog-facts dd { margin: 0; font-family: var(--mono); overflow-wrap: anywhere; }
 
 /* Centred to match the pairing controls above, so the settings panel does not
    alternate between centred and left-aligned actions down its length. */
@@ -1107,7 +1107,7 @@ main {
   justify-content: center;
   align-items: center;
 }
-.danger-actions .modal-note {
+.danger-actions .sheriff-dialog-note {
   flex: 1 1 100%;
   margin: 0;
   text-align: center;
@@ -1214,7 +1214,7 @@ main {
 [dir='rtl'] .ep-sub,
 [dir='rtl'] .rapsheet dd,
 [dir='rtl'] .ticker-body,
-[dir='rtl'] .modal-facts dd,
+[dir='rtl'] .sheriff-dialog-facts dd,
 [dir='rtl'] .result-label {
   direction: ltr;
   text-align: right;
@@ -1877,11 +1877,14 @@ main {
 
 /* The heading introduces the whole page, so it spans whatever the grid is. */
 .help-caps { list-style: none; margin: 6px 0 12px; padding: 0; }
-.help-caps li { padding: 2px 0; color: var(--text-dim); }
-/* Available and unavailable read differently at a glance, because the point of
-   the list is the difference between them rather than the items themselves. */
-.help-caps li.on { color: var(--text); }
-.help-caps li.off { color: var(--text-faint); }
+.help-caps li { display: flex; gap: 8px; align-items: baseline; padding: 2px 0; }
+.help-caps .mark { flex: none; width: 1em; text-align: center; font-weight: 700; }
+/* Each group has its own heading, so colour only reinforces what the heading
+   already says rather than being the only signal. */
+.help-caps.on li { color: var(--text); }
+.help-caps.on .mark { color: var(--ok); }
+.help-caps.off li { color: var(--text-dim); }
+.help-caps.off .mark { color: var(--text-faint); }
 
 .help-head { grid-column: 1 / -1; }
 
@@ -1902,6 +1905,10 @@ main {
 }
 .help-section p { margin: 0 0 8px; font-size: 12.5px; line-height: 1.65; color: var(--text-dim); }
 .help-section p b { color: var(--text); font-weight: 620; }
+/* Sub-headings inside a section, such as Working now. Without this they took
+   the browser's default h4, larger than the section title above them. */
+.help-section h4 { margin: 12px 0 4px; font-size: 12.5px; font-weight: 620; color: var(--text); }
+.help-caps li { font-size: 12.5px; }
 
 /* Marks whichever mode is running, so the paragraph explaining it is the one
    the reader's eye lands on. A rule and a tint rather than a label, because the
@@ -2824,7 +2831,7 @@ main {
   letter-spacing: 0.04em;
 }
 
-.pair-modal { max-width: 30rem; }
+.sheriff-dialog-pair { max-width: 30rem; }
 
 /* A countdown reflows as digits drop unless the figures are tabular and the
    line has room reserved for its longest form. */
@@ -3014,7 +3021,7 @@ main, .statusbar, .banner, .toolbar { min-width: 0; }
    content out from under the blurred region and left it perfectly readable,
    which is how the "Delete everything" section could be read beneath a dialog
    displaying a pairing code. */
-html.dialog-open .modal,
+html.dialog-open .sheriff-dialog,
 html.dialog-open body {
   overflow: hidden;
 }

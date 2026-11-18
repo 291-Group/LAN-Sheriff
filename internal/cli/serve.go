@@ -150,6 +150,9 @@ func runServe(cmd *cobra.Command) error {
 
 	st, err := store.Open(cfg.DBPath())
 	if err != nil {
+		if store.IsCorrupt(err) {
+			return fmt.Errorf("open store: the database is damaged (%w). To fix it: %s", err, store.Remedy(cfg.DBPath()))
+		}
 		return fmt.Errorf("open store: %w", err)
 	}
 	defer st.Close()
@@ -397,6 +400,8 @@ func runServe(cmd *cobra.Command) error {
 	// a demonstration database picked up the real household, hostnames and all,
 	// before the first screenshot could be taken.
 	go st.RunPruner(ctx, srv.RetentionRef)
+	go st.RunCheckpointer(ctx)
+	go st.RunIntegrityChecker(ctx, store.IntegrityInterval)
 	go st.RunRollups(ctx, 10*time.Minute)
 	go st.RunPresence(ctx, time.Minute)
 	go st.RunDeviceTyping(ctx, 30*time.Second)
@@ -547,8 +552,9 @@ func runSuspicion(ctx context.Context, st *store.Store) {
 			suspicion.VolumeAnomaly{},
 			suspicion.ThreatList{},
 		},
-		Sink: st,
-		DB:   st,
+		Sink:        st,
+		DB:          st,
+		OnPassError: func(err error) { st.NoteErr("suspicion rules", err) },
 	}
 
 	// Close findings that have stopped happening, so the list stays a statement
@@ -562,6 +568,7 @@ func runSuspicion(ctx context.Context, st *store.Store) {
 				return
 			case <-ticker.C:
 				if _, err := st.ExpireFindings(ctx, time.Now(), store.FindingTTL); err != nil && ctx.Err() == nil {
+					st.NoteErr("expire findings", err)
 					slog.Warn("could not expire findings", "err", err)
 				}
 			}

@@ -288,6 +288,7 @@ export const pt: Catalog = {
     newDomains: 'novos',
     flagged: 'marcados',
     flaggedOnly: 'Somente marcados',
+    showReverse: 'Mostrar pesquisas inversas',
     noLookups: 'Nenhuma consulta DNS registrada neste período.',
     noLookupsHint:
       'O DNS cifrado é a razão habitual. Os navegadores e o Windows enviam cada vez mais consultas por HTTPS, que não podem ser lidas sem intercetar TLS, e o LAN Sheriff nunca o faz. Uma VPN ou um resolvedor separado também retira as consultas do campo de visão.',
@@ -364,6 +365,8 @@ export const pt: Catalog = {
     title: 'As observações não estão a ser guardadas',
     body: 'O LAN Sheriff vê atividade na rede mas não a consegue guardar, por isso esta vista está desatualizada. O erro foi: {error}',
     failures: '{count} escritas falhadas seguidas',
+    damagedTitle: 'A base de dados está danificada',
+    damagedBody: 'Parte do que o LAN Sheriff registou já não pode ser lida, por isso a Lista de Procurados e algumas vistas deixaram de ser atualizadas. Isto não se resolve sozinho. Para resolver, pare o LAN Sheriff, mova {files} para fora da pasta de dados e inicie-o de novo: é criada uma base de dados nova, pelo que o histórico, os nomes dos dispositivos e as definições recomeçam. Um dano destes costuma significar que o armazenamento está a falhar; num cartão SD, considere substituí-lo. O erro foi: {error}',
   },
 
   deputize: {
@@ -409,7 +412,8 @@ export const pt: Catalog = {
     subtitle: 'Como o LAN Sheriff funciona e o que consegue ou não ver',
     startTitle: 'Comece aqui',
     startMode: 'Esta instalação está a correr em {mode} neste momento.',
-    startSees: 'O que consegue ver daqui',
+    startOn: 'A funcionar agora',
+    startOff: 'Indisponível de momento',
     startDo: 'Para ver mais',
     seeApps: 'Que aplicação nesta máquina abriu cada ligação',
     seeDevices: 'Outros dispositivos na sua rede',
@@ -645,6 +649,7 @@ export const pt: Catalog = {
     e_first_contact: 'Contactou {org} pela primeira vez. Este dispositivo contactou {known_orgs} organizações em {observed_days} dias.',
     e_beaconing: 'Ligou-se a {org} a cada {interval}, {hits} vezes, com {regularity} % de regularidade.',
     e_rare_destination: 'Contactou {country}, que representa {share_pct} % do tráfego desta rede.',
+    e_rare_destination_many: 'Contactou {countries} países que esta rede normalmente nunca usa, entre eles {examples}, que em conjunto representam {share_pct} % do tráfego.',
     e_dga_domain: 'Fez {names} consultas a nomes de domínio gerados automaticamente que não existem, como {example}.',
     e_port_scan_v: 'Sondou {ports} portas em {target}, das quais {connected} responderam.',
     e_port_scan_h: 'Sondou a porta {port} em {hosts} dispositivos, dos quais {connected} responderam.',

@@ -172,6 +172,8 @@ function explain(t: any, f: Finding): string {
   // Whether a known-bad name actually resolved is the difference between
   // "reached" and "tried to reach", which is worth saying accurately.
   if (f.rule === 'threat_list') key += d.resolved ? '_r' : '_u'
+  // One rare country is a place; many is a pattern, and the sentence differs.
+  if (f.rule === 'rare_destination' && Number(d.countries ?? 1) > 1) key += '_many'
 
   const template = t.wantedList[key]
   if (!template) return f.rule
@@ -179,6 +181,8 @@ function explain(t: any, f: Finding): string {
   return fill(template, {
     org: String(d.org ?? ''),
     country: String(d.country ?? ''),
+    countries: String(d.countries ?? ''),
+    examples: String(d.examples ?? ''),
     known_orgs: String(d.known_orgs ?? ''),
     observed_days: String(d.observed_days ?? ''),
     share_pct: String(d.share_pct ?? ''),

@@ -44,6 +44,15 @@ func (s *Store) ObserveDevice(ctx context.Context, o types.Sighting) (string, er
 	if o.SeenAt.IsZero() {
 		o.SeenAt = time.Now()
 	}
+	var id string
+	err := s.retryWrite(ctx, "sighting", func() (err error) {
+		id, err = s.observeDevice(ctx, o)
+		return err
+	})
+	return id, err
+}
+
+func (s *Store) observeDevice(ctx context.Context, o types.Sighting) (string, error) {
 	keys := observationKeys(o)
 
 	tx, err := s.db.BeginTx(ctx, nil)
@@ -420,13 +429,18 @@ const OfflineAfter = 5 * time.Minute
 // Without this every device ever seen stays online forever, because a sighting
 // can only ever prove presence: nothing announces its own absence.
 func (s *Store) MarkStaleDevicesOffline(ctx context.Context, now time.Time) (int64, error) {
-	res, err := s.db.ExecContext(ctx,
-		`UPDATE devices SET online = 0 WHERE online = 1 AND last_seen < ?`,
-		now.Add(-OfflineAfter).Unix())
-	if err != nil {
-		return 0, err
-	}
-	return res.RowsAffected()
+	var n int64
+	err := s.retryWrite(ctx, "presence", func() error {
+		res, err := s.db.ExecContext(ctx,
+			`UPDATE devices SET online = 0 WHERE online = 1 AND last_seen < ?`,
+			now.Add(-OfflineAfter).Unix())
+		if err != nil {
+			return err
+		}
+		n, err = res.RowsAffected()
+		return err
+	})
+	return n, err
 }
 
 // RunPresence keeps the online flags honest until ctx is cancelled.
@@ -521,9 +535,11 @@ func (s *Store) RunDeviceTyping(ctx context.Context, every time.Duration) {
 		// identifies the device, and inferring the type before recording it
 		// would use evidence one cycle out of date.
 		if _, err := s.RefreshObservedServices(ctx, time.Now().Add(-observedServiceWindow)); err != nil && ctx.Err() == nil {
+			s.NoteErr("services refresh", err)
 			slog.Warn("could not refresh observed services", "err", err)
 		}
 		if _, err := s.RefreshDeviceTypes(ctx, discover.DefaultGateway()); err != nil && ctx.Err() == nil {
+			s.NoteErr("device typing", err)
 			slog.Warn("could not refresh device types", "err", err)
 		}
 	}
@@ -682,12 +698,16 @@ GROUP BY a.device_id, f.dst_port, f.proto`, since.Unix())
 	}
 
 	for _, o := range found {
-		if _, err := s.db.ExecContext(ctx, `
+		err := s.retryWrite(ctx, "services", func() error {
+			_, err := s.db.ExecContext(ctx, `
 INSERT INTO device_services (device_id, service, source, first_seen, last_seen)
 VALUES (?, ?, 'observed', ?, ?)
 ON CONFLICT(device_id, service) DO UPDATE SET
   last_seen = MAX(device_services.last_seen, excluded.last_seen)`,
-			o.deviceID, o.service, o.first, o.last); err != nil {
+				o.deviceID, o.service, o.first, o.last)
+			return err
+		})
+		if err != nil {
 			return 0, err
 		}
 	}

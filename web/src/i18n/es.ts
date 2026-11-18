@@ -287,6 +287,7 @@ export const es: Catalog = {
     newDomains: 'nuevos',
     flagged: 'marcados',
     flaggedOnly: 'Solo marcados',
+    showReverse: 'Mostrar búsquedas inversas',
     noLookups: 'No se registraron consultas DNS en este periodo.',
     noLookupsHint:
       'El DNS cifrado es la razón habitual. Los navegadores y Windows envían cada vez más consultas por HTTPS, que no pueden leerse sin interceptar TLS, y LAN Sheriff nunca hace eso. Una VPN o un resolutor aparte también desplaza las consultas fuera de la vista.',
@@ -363,6 +364,8 @@ export const es: Catalog = {
     title: 'Las observaciones no se están guardando',
     body: 'LAN Sheriff ve la actividad de la red pero no puede guardarla, así que esta vista está desactualizada. El error fue: {error}',
     failures: '{count} escrituras fallidas seguidas',
+    damagedTitle: 'La base de datos está dañada',
+    damagedBody: 'Parte de lo que LAN Sheriff registró ya no se puede leer, así que la Lista de Buscados y algunas vistas han dejado de actualizarse. Esto no se arregla solo. Para arreglarlo, detén LAN Sheriff, mueve {files} fuera de la carpeta de datos y vuelve a iniciarlo: crea una base de datos nueva, por lo que el historial, los nombres de los dispositivos y los ajustes empiezan de cero. Un daño así suele significar que el almacenamiento está fallando; si es una tarjeta SD, plantéate sustituirla. El error fue: {error}',
   },
 
   deputize: {
@@ -408,7 +411,8 @@ export const es: Catalog = {
     subtitle: 'Cómo funciona LAN Sheriff y qué puede y no puede ver',
     startTitle: 'Empiece aquí',
     startMode: 'Esta instalación se ejecuta ahora en {mode}.',
-    startSees: 'Lo que puede ver desde aquí',
+    startOn: 'Funciona ahora',
+    startOff: 'No disponible ahora mismo',
     startDo: 'Para ver más',
     seeApps: 'Qué aplicación de esta máquina abrió cada conexión',
     seeDevices: 'Otros dispositivos de su red',
@@ -644,6 +648,7 @@ export const es: Catalog = {
     e_first_contact: 'Contactó con {org} por primera vez. Este dispositivo ha contactado con {known_orgs} organizaciones en {observed_days} días.',
     e_beaconing: 'Se conectó a {org} cada {interval}, {hits} veces, con una regularidad del {regularity} %.',
     e_rare_destination: 'Contactó con {country}, que supone el {share_pct} % del tráfico de esta red.',
+    e_rare_destination_many: 'Contactó con {countries} países que esta red normalmente nunca usa, entre ellos {examples}, que en conjunto suponen el {share_pct} % del tráfico.',
     e_dga_domain: 'Realizó {names} consultas a nombres de dominio generados automáticamente que no existen, como {example}.',
     e_port_scan_v: 'Sondeó {ports} puertos en {target}, de los cuales respondieron {connected}.',
     e_port_scan_h: 'Sondeó el puerto {port} en {hosts} dispositivos, de los cuales respondieron {connected}.',

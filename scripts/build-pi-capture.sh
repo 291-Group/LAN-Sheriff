@@ -28,7 +28,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 OUT="${1:-$ROOT/dist/lan-sheriff-arm64-capture}"
-LIBPCAP=1.10.5
+LIBPCAP=1.10.7
+LIBPCAP_SHA256=0b394ac90dbc0a9838ff97468e05c9c9a3e873dec2514cd58db65d859d296e31
 
 command -v docker >/dev/null || { echo "docker is required" >&2; exit 1; }
 docker version >/dev/null 2>&1 || { echo "docker is not running" >&2; exit 1; }
@@ -54,6 +55,7 @@ apt-get install -y -qq wget build-essential flex bison >/dev/null
 
 cd /tmp
 wget -q https://www.tcpdump.org/release/libpcap-${LIBPCAP}.tar.gz
+echo "${LIBPCAP_SHA256}  libpcap-${LIBPCAP}.tar.gz" | sha256sum -c - >/dev/null
 tar xzf libpcap-${LIBPCAP}.tar.gz
 cd libpcap-${LIBPCAP}
 ./configure --disable-dbus --disable-bluetooth --disable-usb \\
@@ -71,14 +73,14 @@ EOF
 echo "  building arm64 capture, emulated, this takes a few minutes"
 docker run --rm --platform linux/arm64 \
   -v "$work/src:/src" -v "$work/out:/out" -v "$work/build.sh:/build.sh:ro" \
-  golang:1.25-bookworm bash /build.sh
+  golang:1.27-trixie bash /build.sh
 
 # Verified in the same container, because readelf and strings have to run
 # somewhere that can read an arm64 binary, and because a build that is not
 # checked is a build that gets copied onto a card and fails on the Pi.
 docker run --rm --platform linux/arm64 \
   -v "$work/out:/out" -v "$ROOT/scripts:/s:ro" \
-  golang:1.25-bookworm bash /s/verify-linux-binary.sh /out/lan-sheriff AArch64
+  golang:1.27-trixie bash /s/verify-linux-binary.sh /out/lan-sheriff AArch64
 
 cp "$work/out/lan-sheriff" "$OUT"
 echo "  wrote $OUT"

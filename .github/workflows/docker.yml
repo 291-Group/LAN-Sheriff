@@ -73,7 +73,7 @@ env:
 jobs:
   publish:
     name: build and push (amd64, arm64)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     # **Whether Docker Hub credentials exist, decided once, at job level.**
     #
@@ -88,6 +88,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v7
+        with:
+          # The whole history, so the build number below is the real commit
+          # count rather than 1.
+          fetch-depth: 0
+
+      - name: Build number
+        id: build
+        # Base plus commits, the same sum the release binaries carry; see
+        # BUILD_BASE in the Makefile.
+        run: echo "number=$(( $(cat BUILD_BASE 2>/dev/null || echo 0) + $(git rev-list --count HEAD) ))" >> "$GITHUB_OUTPUT"
 
       # arm64 is emulated. The alternative is a second runner and a manifest
       # merge, which is more moving parts than two architectures justify while
@@ -152,11 +162,17 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
+          # Always resolve the base images afresh, and never serve the runtime
+          # stage from cache: its apt-get upgrade is only worth anything if it
+          # actually runs on each build.
+          pull: true
+          no-cache-filters: runtime
           push: ${{ steps.meta.outputs.push }}
           tags: ${{ steps.meta.outputs.tags }}
           build-args: |
             VERSION=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
+            BUILD=${{ steps.build.outputs.number }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

@@ -41,14 +41,25 @@ and it is worth being precise about which can:
 | A Linux box or mini-PC acting as gateway (Debian, Ubuntu, Fedora) | **Yes.** The `linux_amd64` or `linux_arm64` release |
 | A Raspberry Pi routing or bridging, 64-bit Pi OS | **Yes.** The `linux_arm64` release |
 | Stock consumer firmware, TP-Link, Asus, Netgear, an ISP box | **No.** Nothing can be installed on it |
-| OpenWrt | **Not yet.** See below |
+| OpenWrt, arm64 | **Yes, with care.** See below |
+| OpenWrt, mips or mipsel | **No.** See below |
 | pfSense or OPNsense | **Not yet.** See below |
 
-**OpenWrt** builds against musl, and the Linux capture release links glibc
-dynamically, deliberately, because a fully static glibc binary breaks name
-resolution. So the released binary will not start there. Many OpenWrt devices
-are also mips or mipsel, which nothing in the release matrix targets. Reaching
-OpenWrt properly means a musl build, and that is packaging work not yet done.
+**OpenWrt on arm64** runs LAN Sheriff today in two ways. Deputy Mode runs from
+the `linux_arm64_portable` archive, which is built without cgo and so does not
+care that OpenWrt is musl rather than glibc. Patrol Mode, which is the one a
+router is for, runs in Docker with `network_mode: host` and `--interface
+br-lan`, because the Linux capture release links glibc and will not start on
+musl directly. Two things to know before you do: run it from a USB drive or
+eMMC rather than the SD card if you can, see the README on where the data
+lives, and expect hardware flow offloading on Filogic and IPQ boards to hide
+most of each connection from the capture, since offloaded packets never reach
+the CPU. A proper package, and an honest capture hint when offloading is on,
+are the 1.5 work.
+
+**OpenWrt on mips or mipsel** is not supported. The embedded database has no
+32-bit mips support, and most of those devices have too little memory for the
+full program regardless.
 
 **pfSense and OPNsense** are FreeBSD, and FreeBSD is currently reached only by
 the *portable* build, which is cgo-free and therefore has no packet capture at

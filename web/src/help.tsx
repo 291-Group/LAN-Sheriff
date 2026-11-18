@@ -61,6 +61,8 @@ export function Help({ mode, caps }: { mode?: string; caps?: Capabilities | null
     [caps.device_inventory, t.help.seeInventory],
   ] : []
   const hint = caps ? message(t.msg, caps.hint_code, caps.hint) : ''
+  const seesOn = sees.filter(([on]) => on).map(([, label]) => label)
+  const seesOff = sees.filter(([on]) => !on).map(([, label]) => label)
 
   // Read once. Every field is a property of the running binary, so there is
   // nothing to poll and nothing to invalidate. A failed read simply leaves the
@@ -107,14 +109,29 @@ export function Help({ mode, caps }: { mode?: string; caps?: Capabilities | null
       {caps && (
         <Section title={t.help.startTitle} id="start">
           <p>{fill(t.help.startMode, { mode: modeName })}</p>
-          <h4>{t.help.startSees}</h4>
-          <ul class="help-caps">
-            {sees.map(([on, label]) => (
-              <li key={label} class={on ? 'on' : 'off'}>
-                <span aria-hidden="true">{on ? '\u2713' : '\u2014'}</span> {label}
-              </li>
-            ))}
-          </ul>
+          {/* Two labelled groups, not one mixed list. A single list of ticks
+              and dashes, told apart only by shade, read as faded text rather
+              than "this is off": a tester could not tell what was running. */}
+          {seesOn.length > 0 && (
+            <>
+              <h4>{t.help.startOn}</h4>
+              <ul class="help-caps on">
+                {seesOn.map(label => (
+                  <li key={label}><span class="mark" aria-hidden="true">{'\u2713'}</span>{label}</li>
+                ))}
+              </ul>
+            </>
+          )}
+          {seesOff.length > 0 && (
+            <>
+              <h4>{t.help.startOff}</h4>
+              <ul class="help-caps off">
+                {seesOff.map(label => (
+                  <li key={label}><span class="mark" aria-hidden="true">{'\u2715'}</span>{label}</li>
+                ))}
+              </ul>
+            </>
+          )}
           {hint && (<><h4>{t.help.startDo}</h4><p>{hint}</p></>)}
           {caps.enable_cmd && <Command cmd={caps.enable_cmd} />}
 
@@ -402,7 +419,7 @@ export function Help({ mode, caps }: { mode?: string; caps?: Capabilities | null
         <p>{t.help.creditsBody}</p>
         {/* Source names, URLs and licence identifiers are not prose. They are
             proper nouns and legal identifiers, identical in every language, and
-            putting them in twelve catalogues would risk one being mangled in a
+            putting them in sixteen catalogues would risk one being mangled in a
             language nobody on the team reads, with a licence obligation
             attached. Same reasoning as the command blocks. */}
         <dl class="help-views">
@@ -423,17 +440,17 @@ export function Help({ mode, caps }: { mode?: string; caps?: Capabilities | null
             <a href="https://github.com/StevenBlack/hosts" target="_blank" rel="noreferrer">github.com/StevenBlack/hosts</a>
             {', MIT'}
           </dd>
-          <dt>URLhaus</dt>
+          <dt>HaGeZi Threat Intelligence Feeds</dt>
           <dd>
-            <a href="https://urlhaus.abuse.ch" target="_blank" rel="noreferrer">urlhaus.abuse.ch</a>
-            {', CC0'}
+            <a href="https://github.com/hagezi/dns-blocklists" target="_blank" rel="noreferrer">github.com/hagezi/dns-blocklists</a>
+            {', GPL-3.0'}
           </dd>
         </dl>
       </Section>
 
       <Section title={t.help.sweepTitle}>
         <p>{t.help.sweepBody}</p>
-        {/* The flag is rendered here rather than written into twelve
+        {/* The flag is rendered here rather than written into sixteen
             catalogues: a literal command is not prose, it cannot be translated,
             and putting it in the strings risks it being mangled in a language
             nobody on the team reads. */}

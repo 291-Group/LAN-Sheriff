@@ -277,9 +277,13 @@ export interface DNSSummary {
   }
 }
 
-export const fetchDNS = (f: Filter, flaggedOnly = false) =>
+export const fetchDNS = (f: Filter, flaggedOnly = false, showReverse = false) =>
   get<{ events: DNSEvent[]; capable: boolean }>(
-    `/api/dns?${filterQuery(f, flaggedOnly ? { flagged: 1, limit: 300 } : { limit: 300 })}`)
+    `/api/dns?${filterQuery(f, {
+      limit: 300,
+      ...(flaggedOnly ? { flagged: 1 } : {}),
+      ...(showReverse ? { reverse: 1 } : {}),
+    })}`)
 
 export const fetchDNSSummary = (f: Filter) =>
   get<DNSSummary>(`/api/dns/summary?${filterQuery(f)}`)
@@ -388,7 +392,7 @@ export function connectStream(
 // ---------- formatting ----------
 
 export function fmtBytes(n: number): string {
-  if (!n) return '\u00b7'   // a placeholder; the em dash purge briefly made this a comma
+  if (!n) return '\u00b7'   // a placeholder for no value
   const units = ['B', 'KB', 'MB', 'GB', 'TB']
   let i = 0
   while (n >= 1024 && i < units.length - 1) { n /= 1024; i++ }
@@ -416,7 +420,7 @@ export function setTimeLocale(lang: string): void {
  * How long ago, in the reader's language.
  *
  * This was five hardcoded English strings, so every timestamp in the product
- * read "just now" and "4 d ago" in all twelve languages: the Roster's last-seen
+ * read "just now" and "4 d ago" in every language: the Roster's last-seen
  * column, every row of Radio Chatter, every finding on the Wanted List and the
  * peer list in The Dispatch. A dashboard translated everywhere except the one
  * column that changes every second is not a translated dashboard.
@@ -517,8 +521,15 @@ export interface IngestHealth {
   last_write?: string
 }
 
+/** A database SQLite has reported as malformed. See store/integrity.go. */
+export interface StorageHealth {
+  ok: boolean
+  damage?: { error: string; source: string; since: string; file: string }
+  remedy?: string
+}
+
 export const fetchHealth = () =>
-  get<{ tracked: boolean; ingest?: IngestHealth }>('/api/health')
+  get<{ tracked: boolean; ingest?: IngestHealth; storage?: StorageHealth }>('/api/health')
 
 /**
  * displayName picks what to call a device.

@@ -3,6 +3,7 @@
 package cli
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -79,7 +80,7 @@ Run it with no arguments to start the dashboard.`,
 		addServeFlags(c)
 	}
 
-	root.AddCommand(serve, versionCmd(), statusCmd(), installCmd(), uninstallCmd())
+	root.AddCommand(serve, versionCmd(), statusCmd(), healthCmd(), installCmd(), uninstallCmd())
 
 	// Started by a service manager rather than a person? Then the whole
 	// command runs under it, and there is no terminal to return an error to.
@@ -91,6 +92,10 @@ Run it with no arguments to start the dashboard.`,
 	}
 
 	if err := root.Execute(); err != nil {
+		var quiet silentExit
+		if errors.As(err, &quiet) {
+			os.Exit(quiet.code)
+		}
 		fmt.Fprintln(os.Stderr, "error:", err)
 		os.Exit(1)
 	}
@@ -105,3 +110,10 @@ func versionCmd() *cobra.Command {
 		},
 	}
 }
+
+// silentExit carries an exit code without a message: the command already
+// explained itself on stderr, and "error: exit status 1" underneath would say
+// nothing new.
+type silentExit struct{ code int }
+
+func (e silentExit) Error() string { return fmt.Sprintf("exit status %d", e.code) }

@@ -59,11 +59,15 @@ const ALLOWED = new Set([
   'interface',
 ])
 
-const NON_LATIN = new Set(['ru', 'ja', 'zh', 'hi', 'bn', 'ar', 'he'])
-const LATIN = new Set(['en', 'fr', 'es', 'de', 'pt'])
+const NON_LATIN = new Set(['ru', 'uk', 'ja', 'zh', 'ko', 'hi', 'bn', 'ar', 'he'])
+const LATIN = new Set(['en', 'fr', 'es', 'de', 'pt', 'it', 'pl'])
 
-// Blocks belonging to the non-Latin catalogues.
-const FOREIGN = /[Ѐ-ӿ֐-׿؀-ۿऀ-ॿঀ-৿぀-ヿ一-鿿]/
+// Blocks belonging to the non-Latin catalogues. Ukrainian shares Russian's
+// Cyrillic block. Korean is the Hangul syllables, the conjoining jamo and the
+// compatibility jamo, because a Korean string spliced with Latin is the same
+// damage as a Japanese one and was invisible to this check until it knew the
+// script.
+const FOREIGN = /[Ѐ-ӿ֐-׿؀-ۿऀ-ॿঀ-৿぀-ヿ一-鿿가-힣ᄀ-ᇿ㄰-㆏]/
 
 let failed = false
 
@@ -99,7 +103,7 @@ for (const file of readdirSync(DIR).filter((f) => f.endsWith('.ts') && f !== 'in
       // see them at all: an invisible character sitting in a source file is
       // exactly the kind of damage this script exists to catch, and writing one
       // deliberately should not mean hiding it. Scanning the escape reports its
-      // "u" as a stray Latin run, which is the check misreading house style.
+      // "u" as a stray Latin run, which is the check misreading a deliberate escape.
       prose = prose.replace(/\\u[0-9a-fA-F]{4}/g, ' ')
       for (const run of prose.match(/[A-Za-z]+/g) ?? []) {
         if (!ALLOWED.has(run)) {
