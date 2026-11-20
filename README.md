@@ -1011,3 +1011,7 @@ guarantee should be legal rather than merely a promise.
 Using LAN Sheriff (on any number of machines, at home or commercially) carries no obligation to publish
 anything. The obligation exists only if you distribute a modified version, or run one as a service for
 others.
+
+---
+
+Built with ❤️ by [291 Group](https://291group.com)
